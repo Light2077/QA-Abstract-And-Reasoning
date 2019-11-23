@@ -6,6 +6,7 @@ import numpy as np
 import time
 from functools import wraps
 
+
 # 装饰器
 # 计算函数消耗时间的
 def count_time(func):
@@ -35,8 +36,8 @@ def load_dataset(train_data_path, test_data_path):
     # train_data.dropna(subset=['Question', 'Dialogue', 'Report'], how='any', inplace=True)
     # test_data.dropna(subset=['Question', 'Dialogue'], how='any', inplace=True)
 
-    train_data = train_df.fillna('')
-    test_data = test_df.fillna('')
+    train_data = train_data.fillna('')
+    test_data = test_data.fillna('')
     return train_data, test_data
 
 
@@ -60,15 +61,16 @@ def clean_sentence(sentence):
     else:
         return ''
 
+
 @count_time
-def get_text(file, *DataFrame):
+def get_text(file, *dataframe):
     """
     把训练集，测试集的文本拼接在一起
     :param DataFrame: 传入一个包含数个df的元组
     :return:
     """
     text = ""
-    for df in DataFrame:
+    for df in dataframe:
         # 把从第三列(包括)开始的数据拼在一起
         text += "\n".join(df.iloc[:,3:].apply(lambda x:" ".join(x.to_list()), axis=1))
         # text += "<end>\n".join(df.iloc[:, 3:].apply(lambda x: " ".join(["<start>"] + x.to_list()), axis=1))
@@ -82,21 +84,31 @@ def load_stop_words(file):
     stop_words = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
     return stop_words
 
-def create_user_dict(file, *DataFrame):
+
+@count_time
+def create_user_dict(file, *dataframe):
     """
     创建自定义用户词典
     :param file: 存储位置
     :param DataFrame: 传入的数据集
     :return:
     """
-    user_dict = []
-    Model_Brand = pd.Series()
-    for df in DataFrame:
-        Model_Brand = pd.concat([Model_Brand, df.Model, df.Brand])
-    Model_Brand = Model_Brand.apply()
+    def process(string):
 
-    return Model_Brand
+        r = re.compile("[^\u4e00-\u9fa5_a-zA-Z0-9]+|进口|海外|")
+        return r.sub("", string)
+
+    user_dict = pd.Series()
+    for df in dataframe:
+        user_dict = pd.concat([user_dict, df.Model, df.Brand])
+    user_dict = user_dict.apply(process).unique()
+    user_dict = np.delete(user_dict, np.argwhere(user_dict == ""))
+    with open(file, mode="w", encoding="utf-8") as f:
+        f.write("\n".join(user_dict))
+
+    return user_dict
     # return user_dict
+
 
 if __name__ == '__main__':
     # 相关已存在数据路径
@@ -106,7 +118,7 @@ if __name__ == '__main__':
 
     # 生成数据路径
     raw_text_path = '../data/raw_text.txt'  # 原始文本
-    user_dict_path = '../data/user_dict.txt'  # 自定义词典
+    user_dict_path = '../data/user_dict_new.txt'  # 自定义词典
 
     # 载入数据(包含了空值的处理)
     train_df, test_df = load_dataset(train_data_path, test_data_path)
@@ -117,7 +129,7 @@ if __name__ == '__main__':
     raw_text = get_text(raw_text_path, train_df, test_df)
 
     # todo: 创建自定义的用户词典
-
+    user_dict = create_user_dict(user_dict_path, train_df, test_df)
     # user_dict = create_user_dict()
 
 # todo: 完善数据预处理，如删掉(进口)
