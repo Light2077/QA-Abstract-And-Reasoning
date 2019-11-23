@@ -1,48 +1,127 @@
+import re
+import os
+import jieba
 import pandas as pd
 import numpy as np
+import time
+from functools import wraps
+
+# 装饰器
+# 计算函数消耗时间的
+def count_time(func):
+    @wraps(func)
+    def int_time(*args, **kwargs):
+        start_time = time.time()  # 程序开始时间
+        res = func(*args)
+        over_time = time.time()   # 程序结束时间
+        total_time = (over_time-start_time)
+        print('程序{}()共耗时{:.2f}秒'.format(func.__name__, total_time))
+        return res
+    return int_time
 
 
-class Preprocess:
+def load_dataset(train_data_path, test_data_path):
     """
-    用于对原始数据集进行预处理
+    数据数据集
+    :param train_data_path:训练集路径
+    :param test_data_path: 测试集路径
+    :return:
     """
+    # 读取数据集
+    train_data = pd.read_csv(train_data_path)
+    test_data = pd.read_csv(test_data_path)
 
-    def __init__(self):
-        self.train_data_path = '../data/AutoMaster_TrainSet.csv'
-        self.test_data_path = '../data/AutoMaster_TestSet.csv'
-        self.stop_word_path = '../data/stopwords/哈工大停用词表.txt'
+    # 空值处理
+    # train_data.dropna(subset=['Question', 'Dialogue', 'Report'], how='any', inplace=True)
+    # test_data.dropna(subset=['Question', 'Dialogue'], how='any', inplace=True)
 
-        # 载入停用词和数据集
-        self.stop_words = self.load_stop_words(self.stop_word_path)
-        self.train_df, self.test_df = self.load_dataset(self.train_data_path, self.test_data_path)
-
-    @staticmethod
-    def load_stop_words(stop_word_path):
-        """
-        加载停用词
-        :param stop_word_path:停用词路径
-        :return: 停用词表 list
-        """
-        # 打开文件
-        file = open(stop_word_path, 'r', encoding='utf-8')
-        # 读取所有行
-        stop_words = file.readlines()
-        # 去除每一个停用词前后 空格 换行符
-        stop_words = [stop_word.strip() for stop_word in stop_words]
-        return stop_words
-
-    @staticmethod
-    def load_dataset(train_data_path, test_data_path):
-        """
-        数据数据集
-        :param train_data_path:训练集路径
-        :param test_data_path: 测试集路径
-        :return:
-        """
-        # 读取数据集
-        train_data = pd.read_csv(train_data_path)
-        test_data = pd.read_csv(test_data_path)
-        return train_data, test_data
+    train_data = train_df.fillna('')
+    test_data = test_df.fillna('')
+    return train_data, test_data
 
 
-pre = Preprocess()
+def clean_sentence(sentence):
+    '''
+    这里我觉得用我的比较好
+    特殊符号去除
+    :param sentence: 待处理的字符串
+    :return: 过滤特殊字符后的字符串
+    '''
+    if isinstance(sentence, str):
+
+        res = re.sub(r"\(进口\)", "", sentence)
+
+        res = re.sub(
+            r'[\s+\-\|\!\/\[\]\{\}_,.$%^*(+\"\')]+|[:：+——()?【】“”！，。？、~@#￥%……&*（）]+|车主说|技师说|语音|图片|你好|您好',
+            '',
+            res)
+
+        return res
+    else:
+        return ''
+
+@count_time
+def get_text(file, *DataFrame):
+    """
+    把训练集，测试集的文本拼接在一起
+    :param DataFrame: 传入一个包含数个df的元组
+    :return:
+    """
+    text = ""
+    for df in DataFrame:
+        # 把从第三列(包括)开始的数据拼在一起
+        text += "\n".join(df.iloc[:,3:].apply(lambda x:" ".join(x.to_list()), axis=1))
+        # text += "<end>\n".join(df.iloc[:, 3:].apply(lambda x: " ".join(["<start>"] + x.to_list()), axis=1))
+
+    with open(file, mode="w", encoding="utf-8") as f:
+        f.write(text)
+
+    return text
+
+def load_stop_words(file):
+    stop_words = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
+    return stop_words
+
+def create_user_dict(file, *DataFrame):
+    """
+    创建自定义用户词典
+    :param file: 存储位置
+    :param DataFrame: 传入的数据集
+    :return:
+    """
+    user_dict = []
+    Model_Brand = pd.Series()
+    for df in DataFrame:
+        Model_Brand = pd.concat([Model_Brand, df.Model, df.Brand])
+    Model_Brand = Model_Brand.apply()
+
+    return Model_Brand
+    # return user_dict
+
+if __name__ == '__main__':
+    # 相关已存在数据路径
+    train_data_path = '../data/AutoMaster_TrainSet.csv'
+    test_data_path = '../data/AutoMaster_TestSet.csv'
+    stop_words_path = '../data/stopwords/哈工大停用词表.txt'
+
+    # 生成数据路径
+    raw_text_path = '../data/raw_text.txt'  # 原始文本
+    user_dict_path = '../data/user_dict.txt'  # 自定义词典
+
+    # 载入数据(包含了空值的处理)
+    train_df, test_df = load_dataset(train_data_path, test_data_path)
+    # 载入停用词
+    stop_words = load_stop_words(stop_words_path)
+    stop_words.extend(["(进口)"])
+    # 获得原始的数据文本
+    raw_text = get_text(raw_text_path, train_df, test_df)
+
+    # todo: 创建自定义的用户词典
+
+    # user_dict = create_user_dict()
+
+# todo: 完善数据预处理，如删掉(进口)
+"""
+    # r = re.compile(r"<start>.*\(进口\).*<end>")
+    # s = r.findall(raw_text)
+"""
