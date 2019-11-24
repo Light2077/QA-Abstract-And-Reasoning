@@ -1,15 +1,14 @@
 import re
-import os
 import jieba
 import pandas as pd
 import numpy as np
 import time
 from functools import wraps
 from multiprocessing import Pool, cpu_count
+from utils.config import *
 
 
-# 装饰器
-# 计算函数消耗时间的
+# 装饰器: 计算函数消耗时间的
 def count_time(func):
     @wraps(func)
     def int_time(*args, **kwargs):
@@ -22,16 +21,16 @@ def count_time(func):
     return int_time
 
 
-def load_dataset(train_data_path, test_data_path):
+def load_dataset(train_data_path_, test_data_path_):
     """
     数据数据集
-    :param train_data_path:训练集路径
-    :param test_data_path: 测试集路径
+    :param train_data_path_:训练集路径
+    :param test_data_path_: 测试集路径
     :return:
     """
     # 读取数据集
-    train_data = pd.read_csv(train_data_path)
-    test_data = pd.read_csv(test_data_path)
+    train_data = pd.read_csv(train_data_path_)
+    test_data = pd.read_csv(test_data_path_)
 
     # 空值处理
     # train_data.dropna(subset=['Question', 'Dialogue', 'Report'], how='any', inplace=True)
@@ -77,7 +76,7 @@ def create_user_dict(file, *dataframe):
         :param string:
         :return:
         """
-        r = re.compile(r"[\(（]进口[\)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
+        r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
         return r.sub("", string)
 
     user_dict_ = pd.Series()
@@ -98,18 +97,20 @@ class Preprocess:
         self.stop_words_path = '../data/stopwords/哈工大停用词表.txt'
         self.stop_words = self.load_stop_words(self.stop_words_path)
 
-    def load_stop_words(self, file):
+    @staticmethod
+    def load_stop_words(file):
         stop_words_ = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
         return stop_words_
 
-    def clean_sentence(self, sentence):
+    @staticmethod
+    def clean_sentence(sentence):
         """
         特殊符号去除
         :param sentence: 待处理的字符串
         :return: 过滤特殊字符后的字符串
         """
         if isinstance(sentence, str):
-            r = re.compile(r"[\(（]进口[\)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
+            r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
             res = r.sub("", sentence)
 
             r = re.compile(r"车主说|技师说|语音|图片|你好|您好")
@@ -186,18 +187,6 @@ class Preprocess:
 
 
 if __name__ == '__main__':
-    # 已有数据的路径
-    train_data_path = '../data/AutoMaster_TrainSet.csv'
-    test_data_path = '../data/AutoMaster_TestSet.csv'
-    stop_words_path = '../data/stopwords/哈工大停用词表.txt'
-
-    # 预处理过程中生成的数据的路径
-    raw_text_path = '../data/raw_text.txt'  # 原始文本
-    proc_text_path = '../data/proc_text.txt'  # 预处理后的文本
-    user_dict_path = '../data/user_dict_new.txt'  # 自定义词典
-
-    train_seg_path = '../data/train_seg.csv'  # 预处理后的csv文件
-    test_seg_path = '../data/test_seg.csv'
 
     # 初始化
     train_df, test_df = load_dataset(train_data_path, test_data_path)  # 载入数据(包含了空值的处理)
@@ -223,9 +212,8 @@ if __name__ == '__main__':
 
 # todo: 完善数据预处理，如删掉(进口)
 """
-    # r = re.compile(r"<start>.*\(进口\).*<end>")
-    # s = r.findall(raw_text)
+# r = re.compile(r"<start>.*(进口).*<end>")
+# s = r.findall(raw_text)
 """
 # todo: 第一次运行跟最后一次运行应该有所区别
-
 # todo: 优化user_dict 优化clean 优化stop_words
