@@ -72,7 +72,11 @@ def create_user_dict(file, *dataframe):
     :return:
     """
     def process(string):
-
+        """
+        预处理sentence
+        :param string:
+        :return:
+        """
         r = re.compile(r"[\(（]进口[\)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
         return r.sub("", string)
 
@@ -81,6 +85,8 @@ def create_user_dict(file, *dataframe):
         user_dict_ = pd.concat([user_dict_, df.Model, df.Brand])
     user_dict_ = user_dict_.apply(process).unique()
     user_dict_ = np.delete(user_dict_, np.argwhere(user_dict_ == ""))
+
+    # 保存user_dict
     with open(file, mode="w", encoding="utf-8") as f:
         f.write("\n".join(user_dict_))
 
@@ -133,6 +139,7 @@ class Preprocess:
         :param sentence:待处理字符串
         :return: 处理后的字符串
         """
+        sentence = sentence.upper()
         # 清除无用词
         sentence = self.clean_sentence(sentence)
         # 切词，默认精确模式，全模式cut参数cut_all=True
@@ -179,27 +186,27 @@ class Preprocess:
 
 
 if __name__ == '__main__':
-    # 相关已存在数据路径
+    # 已有数据的路径
     train_data_path = '../data/AutoMaster_TrainSet.csv'
     test_data_path = '../data/AutoMaster_TestSet.csv'
     stop_words_path = '../data/stopwords/哈工大停用词表.txt'
 
-    # 生成数据路径
+    # 预处理过程中生成的数据的路径
     raw_text_path = '../data/raw_text.txt'  # 原始文本
-    proc_text_path = '../data/proc_text.txt'
+    proc_text_path = '../data/proc_text.txt'  # 预处理后的文本
     user_dict_path = '../data/user_dict_new.txt'  # 自定义词典
 
-    train_seg_path = '../data/train_seg.csv'
+    train_seg_path = '../data/train_seg.csv'  # 预处理后的csv文件
     test_seg_path = '../data/test_seg.csv'
-    # 载入数据(包含了空值的处理)
-    train_df, test_df = load_dataset(train_data_path, test_data_path)
-    # 获得原始的数据文本
-    raw_text = get_text(train_df, test_df, file=raw_text_path)
-    # 创建用户自定义词典
-    user_dict = create_user_dict(user_dict_path, train_df, test_df)
-    # jieba载入自定义词典
-    jieba.load_userdict(user_dict_path)
 
+    # 初始化
+    train_df, test_df = load_dataset(train_data_path, test_data_path)  # 载入数据(包含了空值的处理)
+    raw_text = get_text(train_df, test_df, file=raw_text_path)  # 获得原始的数据文本
+
+    user_dict = create_user_dict(user_dict_path, train_df, test_df)  # 创建用户自定义词典
+    jieba.load_userdict(user_dict_path)  # jieba载入自定义词典
+
+    # 预处理阶段
     if not os.path.isfile(train_seg_path):
         proc = Preprocess()  # 创建个预处理类
         print("多进程处理数据")
@@ -211,6 +218,7 @@ if __name__ == '__main__':
     else:
         train_seg, test_seg = load_dataset(train_seg_path, test_seg_path)
 
+    # 保存预处理后的文本，作为word2vec的训练材料
     proc_text = get_text(train_seg, test_seg, file=proc_text_path)
 
 # todo: 完善数据预处理，如删掉(进口)
@@ -219,3 +227,5 @@ if __name__ == '__main__':
     # s = r.findall(raw_text)
 """
 # todo: 第一次运行跟最后一次运行应该有所区别
+
+# todo: 优化user_dict 优化clean 优化stop_words
