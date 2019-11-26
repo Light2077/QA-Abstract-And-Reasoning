@@ -19,7 +19,6 @@ if __name__ == "__main__":
         wv_model = word2vec.Word2Vec.load(save_model_path)
 
     # wv_model.wv.most_similar(['奇瑞'],topn=10)
-
     embedding_matrix = wv_model.wv.vectors  # 获取词向量矩阵
 
     # 建立词表
