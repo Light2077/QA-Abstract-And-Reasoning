@@ -96,7 +96,6 @@ class Preprocess:
     def __init__(self):
         self.stop_words_path = '../data/stopwords/哈工大停用词表.txt'
         self.stop_words = self.load_stop_words(self.stop_words_path)
-
     @staticmethod
     def load_stop_words(file):
         stop_words_ = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
@@ -158,6 +157,7 @@ class Preprocess:
         :return:处理好的数据集
         """
         # 批量预处理 训练集和测试集
+        jieba.load_userdict(user_dict_path)
         for col_name in ['Brand', 'Model', 'Question', 'Dialogue']:
             df[col_name] = df[col_name].apply(self.sentence_proc)
 
@@ -170,6 +170,7 @@ class Preprocess:
     def parallelize(self, df):
         """
         多核并行处理模块
+        有个问题： 多线程处理时，jieba的载入自定义词典失效
         :param df: DataFrame数据
         :return: 处理后的数据
         """
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     raw_text = get_text(train_df, test_df, file=raw_text_path)  # 获得原始的数据文本
 
     user_dict = create_user_dict(user_dict_path, train_df, test_df)  # 创建用户自定义词典
-    jieba.load_userdict(user_dict_path)  # jieba载入自定义词典
+    # jieba.load_userdict(user_dict_path)  # jieba载入自定义词典
 
     # 预处理阶段
     if not os.path.isfile(train_seg_path):
@@ -214,6 +215,11 @@ if __name__ == '__main__':
 """
 # r = re.compile(r"<start>.*(进口).*<end>")
 # s = r.findall(raw_text)
+a = train_df.loc[2, "Question"]
 """
 # todo: 第一次运行跟最后一次运行应该有所区别
 # todo: 优化user_dict 优化clean 优化stop_words
+"""
+2019.11.26
+修复了多线程运行时，jieba用户自定义词典无效的bug
+"""
