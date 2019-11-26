@@ -15,3 +15,6 @@ user_dict_path = os.path.join(root, 'data', 'user_dict_new.txt')  # 自定义词
 
 train_seg_path = os.path.join(root, 'data', 'train_seg.csv')  # 预处理后的csv文件
 test_seg_path = os.path.join(root, 'data', 'test_seg.csv')
+
+# 词向量模型
+save_model_path = os.path.join(root, 'data', 'wv', 'word2vec.model')

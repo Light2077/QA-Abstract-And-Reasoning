@@ -194,7 +194,6 @@ if __name__ == '__main__':
     raw_text = get_text(train_df, test_df, file=raw_text_path)  # 获得原始的数据文本
 
     user_dict = create_user_dict(user_dict_path, train_df, test_df)  # 创建用户自定义词典
-    # jieba.load_userdict(user_dict_path)  # jieba载入自定义词典
 
     # 预处理阶段
     if not os.path.isfile(train_seg_path):

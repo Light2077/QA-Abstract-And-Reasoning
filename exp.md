@@ -1,3 +1,4 @@
+
 # pycharm
 
 - F2 —— 快速定位error或warning
