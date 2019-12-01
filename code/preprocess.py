@@ -7,7 +7,6 @@ from functools import wraps
 from multiprocessing import Pool, cpu_count
 from utils.config import *
 
-
 # 装饰器: 计算函数消耗时间的
 def count_time(func):
     @wraps(func)
@@ -157,7 +156,7 @@ class Preprocess:
         :return:处理好的数据集
         """
         # 批量预处理 训练集和测试集
-        jieba.load_userdict(user_dict_path)
+        jieba.load_userdict(USER_DICT)
         for col_name in ['Brand', 'Model', 'Question', 'Dialogue']:
             df[col_name] = df[col_name].apply(self.sentence_proc)
 
@@ -190,25 +189,25 @@ class Preprocess:
 if __name__ == '__main__':
 
     # 初始化
-    train_df, test_df = load_dataset(train_data_path, test_data_path)  # 载入数据(包含了空值的处理)
-    raw_text = get_text(train_df, test_df, file=raw_text_path)  # 获得原始的数据文本
+    train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
+    raw_text = get_text(train_df, test_df, file=RAW_TEXT)  # 获得原始的数据文本
 
-    user_dict = create_user_dict(user_dict_path, train_df, test_df)  # 创建用户自定义词典
+    user_dict = create_user_dict(USER_DICT, train_df, test_df)  # 创建用户自定义词典
 
     # 预处理阶段
-    if not os.path.isfile(train_seg_path):
+    if not os.path.isfile(TRAIN_SEG):
         proc = Preprocess()  # 创建个预处理类
         print("多进程处理数据")
         train_seg = proc.parallelize(train_df)
         test_seg = proc.parallelize(test_df)
 
-        train_seg.to_csv(train_seg_path, index=None)
-        test_seg.to_csv(test_seg_path, index=None)
+        train_seg.to_csv(TRAIN_SEG, index=None)
+        test_seg.to_csv(TEST_SEG, index=None)
     else:
-        train_seg, test_seg = load_dataset(train_seg_path, test_seg_path)
+        train_seg, test_seg = load_dataset(TRAIN_SEG, TEST_SEG)
 
     # 保存预处理后的文本，作为word2vec的训练材料
-    proc_text = get_text(train_seg, test_seg, file=proc_text_path)
+    proc_text = get_text(train_seg, test_seg, file=PROC_TEXT)
 
 # todo: 完善数据预处理，如删掉(进口)
 """
