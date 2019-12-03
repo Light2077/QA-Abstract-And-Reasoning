@@ -2,31 +2,15 @@
 运行此代码可以获得：
 - word2vec.model
 """
+
+from utils.loader import *
 from utils.config import *
+
 import pandas as pd
 from gensim.models.word2vec import LineSentence
 from gensim.models import word2vec
 import numpy as np
 import os
-
-
-def save_vocab(path, vocab_index_):
-    with open(path, mode="w", encoding="utf-8") as f:
-        for key, value in vocab_index_.items():
-            f.write(str(key)+" ")
-            f.write(str(value)+"\n")
-
-
-def load_vocab(path):
-    vocab_index_ = {}
-    index_vocab_ = {}
-    with open(path, mode="r", encoding="utf-8") as f:
-        for line in f.readlines():
-            [vocab, index] = line.strip("\n").split(" ")
-            vocab_index_[vocab] = index
-            index_vocab_[index] = vocab
-    return vocab_index_, index_vocab_
-
 
 if __name__ == "__main__":
 

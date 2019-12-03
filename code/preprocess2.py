@@ -13,6 +13,7 @@ from utils.config import *
 from utils.loader import *
 
 
+
 def pad(sentence, max_len, vocab_index_):
     """
     给句子加上<START><PAD><UNK><END>
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     train_seg['Y'].to_csv(TRAIN_Y_PAD, index=None, header=False)
     test_seg['X'].to_csv(TEST_X_PAD, index=None, header=False)
 
-    # retrain词向量
+    # add retrain词向量
     if not os.path.isfile(WV_MODEL_PAD):
         print("开始retrain")
 
@@ -116,12 +117,22 @@ if __name__ == '__main__':
     index_vocab = {index: word for index, word in enumerate(wv_model.wv.index2word)}
     embedding_matrix = wv_model.wv.vectors
 
+    # 保存更新后的vocab和embedding
+    save_vocab(VOCAB_INDEX_PAD, vocab_index)  # vocab
+    np.savetxt(EMBEDDING_MATRIX_PAD, embedding_matrix)  # embedding
+
     unk_index = vocab_index['<UNK>']
     # 将词转换成索引  [<START> 方向机 重 ...] -> [32800, 403, 986, 246, 231...]
     train_x = train_seg['X'].apply(lambda x: transform_data(x, vocab_index))
     train_y = train_seg['Y'].apply(lambda x: transform_data(x, vocab_index))
     test_x = test_seg['X'].apply(lambda x: transform_data(x, vocab_index))
 
-    train_x.to_csv(TRAIN_X, index=None, header=False)
-    train_y.to_csv(TRAIN_Y, index=None, header=False)
-    test_x.to_csv(TEST_X, index=None, header=False)
+    train_x= np.array(train_x.tolist())
+    train_y = np.array(train_y.tolist())
+    test_x = np.array(test_x.tolist())
+
+    # 保存数据
+    np.savetxt(TRAIN_X, train_x, fmt='%0.8f')
+    np.savetxt(TRAIN_Y, train_y, fmt='%0.8f')
+    np.savetxt(TEST_X, test_x, fmt='%0.8f')
+
