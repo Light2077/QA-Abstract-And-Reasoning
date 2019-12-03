@@ -1,3 +1,12 @@
+"""
+运行此代码可以获得：
+- raw_text.txt 原始文本
+- user_dict_new.txt 用户自定义词典
+- test_seg.csv 预处理分词后的测试集
+- train_seg.csv 预处理分词后的训练集
+- proc_text.csc 预处理后的文本
+"""
+
 import re
 import jieba
 import pandas as pd
@@ -7,16 +16,18 @@ from functools import wraps
 from multiprocessing import Pool, cpu_count
 from utils.config import *
 
+
 # 装饰器: 计算函数消耗时间的
 def count_time(func):
     @wraps(func)
     def int_time(*args, **kwargs):
         start_time = time.time()  # 程序开始时间
         res = func(*args, **kwargs)
-        over_time = time.time()   # 程序结束时间
-        total_time = (over_time-start_time)
+        over_time = time.time()  # 程序结束时间
+        total_time = (over_time - start_time)
         print('程序{}()共耗时{:.2f}秒'.format(func.__name__, total_time))
         return res
+
     return int_time
 
 
@@ -69,6 +80,7 @@ def create_user_dict(file, *dataframe):
     :param dataframe: 传入的数据集
     :return:
     """
+
     def process(string):
         """
         预处理sentence
@@ -95,6 +107,7 @@ class Preprocess:
     def __init__(self):
         self.stop_words_path = '../data/stopwords/哈工大停用词表.txt'
         self.stop_words = self.load_stop_words(self.stop_words_path)
+
     @staticmethod
     def load_stop_words(file):
         stop_words_ = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
@@ -195,7 +208,8 @@ if __name__ == '__main__':
     user_dict = create_user_dict(USER_DICT, train_df, test_df)  # 创建用户自定义词典
 
     # 预处理阶段
-    if not os.path.isfile(TRAIN_SEG):
+    reprocess = False  # 是否重新预处理
+    if not os.path.isfile(TRAIN_SEG) or reprocess:
         proc = Preprocess()  # 创建个预处理类
         print("多进程处理数据")
         train_seg = proc.parallelize(train_df)
