@@ -1,12 +1,3 @@
-"""
-运行此代码可以获得：
-- raw_text.txt 原始文本
-- user_dict_new.txt 用户自定义词典
-- test_seg.csv 预处理分词后的测试集
-- train_seg.csv 预处理分词后的训练集
-- proc_text.csc 预处理后的文本
-"""
-
 import re
 import jieba
 import pandas as pd
@@ -17,7 +8,6 @@ from multiprocessing import Pool, cpu_count
 from utils.config import *
 
 
-# 装饰器: 计算函数消耗时间的
 def count_time(func):
     @wraps(func)
     def int_time(*args, **kwargs):
@@ -243,40 +233,3 @@ class Preprocess:
         sentence = self.transform_data(sentence, vocab)
         return np.array([sentence])
 
-
-if __name__ == '__main__':
-
-    # 初始化
-    train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
-    raw_text = get_text(train_df, test_df, file=RAW_TEXT)  # 获得原始的数据文本
-
-    user_dict = create_user_dict(USER_DICT, train_df, test_df)  # 创建用户自定义词典
-
-    # 预处理阶段
-    reprocess = False  # 是否重新预处理
-    if not os.path.isfile(TRAIN_SEG) or reprocess:
-        proc = Preprocess()  # 创建个预处理类
-        print("多进程处理数据")
-        train_seg = proc.parallelize(train_df)
-        test_seg = proc.parallelize(test_df)
-
-        train_seg.to_csv(TRAIN_SEG, index=None)
-        test_seg.to_csv(TEST_SEG, index=None)
-    else:
-        train_seg, test_seg = load_dataset(TRAIN_SEG, TEST_SEG)
-
-    # 保存预处理后的文本，作为word2vec的训练材料
-    proc_text = get_text(train_seg, test_seg, file=PROC_TEXT)
-
-# todo: 完善数据预处理，如删掉(进口)
-"""
-# r = re.compile(r"<start>.*(进口).*<end>")
-# s = r.findall(raw_text)
-a = train_df.loc[2, "Question"]
-"""
-# todo: 第一次运行跟最后一次运行应该有所区别
-# todo: 优化user_dict 优化clean 优化stop_words
-"""
-2019.11.26
-修复了多线程运行时，jieba用户自定义词典无效的bug
-"""

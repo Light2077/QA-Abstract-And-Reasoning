@@ -12,8 +12,6 @@ from gensim.models import word2vec
 from utils.config import *
 from utils.loader import *
 
-
-
 def pad(sentence, max_len, vocab_index_):
     """
     给句子加上<START><PAD><UNK><END>
