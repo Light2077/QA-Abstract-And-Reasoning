@@ -57,7 +57,7 @@ def transform_data(sentence, vocab):
 
 if __name__ == '__main__':
 
-    vocab_index, index_vocab = load_vocab(VOCAB_INDEX)
+    vocab_index, index_vocab = load_vocab(VOCAB)
 
     # 预处理数据载入
     train_seg = pd.read_csv(TRAIN_SEG).fillna("")

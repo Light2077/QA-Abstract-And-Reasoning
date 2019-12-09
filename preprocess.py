@@ -6,6 +6,7 @@
 - train_seg.csv 预处理分词后的训练集
 - proc_text.csc 预处理后的文本
 """
+from word2vec import *
 from utils.saveLoader import *
 from utils.decorator import *
 from utils.config import *
@@ -24,14 +25,12 @@ def create_user_dict(*dataframe):
     :return:
     """
 
-    def process(string):
+    def process(sentence):
         """
         预处理sentence
-        :param string:
-        :return:
         """
         r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
-        return r.sub("", string)
+        return r.sub("", sentence)
 
     _user_dict = pd.Series()
     for df in dataframe:
@@ -44,8 +43,7 @@ def create_user_dict(*dataframe):
 
 class Preprocess:
     def __init__(self):
-        self.stop_words_path = '../data/stopwords/哈工大停用词表.txt'
-        self.stop_words = self.load_stop_words(self.stop_words_path)
+        self.stop_words = self.load_stop_words(STOP_WORDS)
 
     @staticmethod
     def load_stop_words(file):
@@ -75,7 +73,6 @@ class Preprocess:
         else:
             return ''
 
-    # 过滤停用词
     def filter_stopwords(self, words):
         """
         过滤停用词
@@ -137,18 +134,30 @@ class Preprocess:
             data = pd.concat(p.map(func, data_split))
         return data
 
-    # 为训练，测试，评估服务的预处理
-    def pad(self, sentence, max_len, vocab_index_):
+    def get_seg_data(self, _train_df, _test_df, reprocess=False):
+        # 合并上面的操作流程，获取预处理数据集
+        if not os.path.isfile(TRAIN_SEG) or reprocess:
+            print("多进程处理数据")
+            _train_seg = self.parallelize(_train_df)
+            _test_seg = self.parallelize(_test_df)
+
+            print("保存数据")
+            print(TRAIN_SEG, "\n", TEST_SEG)
+            _train_seg.to_csv(TRAIN_SEG, index=None)
+            _test_seg.to_csv(TEST_SEG, index=None)
+        else:
+            _train_seg, _test_seg = load_dataset(TRAIN_SEG, TEST_SEG)
+        return _train_seg, _test_seg
+
+    # 下半部分为训练，测试，评估服务的预处理
+    def pad(self, sentence, max_len, _vocab):
         """
         给句子加上<START><PAD><UNK><END>
-        example:
-        sentence: "方向机 重 助力 泵..."
-
+        example: "方向机 重 助力 泵..." -> "<START> 方向机 重 助力 泵...<END>"
         :param sentence: 一句话
         :param max_len: 句子的最大长度
-        :param vocab_index_: key:词 value:index
-
-        :return:"<START> 方向机 重 助力 泵...<END>"
+        :param _vocab: key:词 value:index
+        :return: sentence
         """
 
         # 0.按空格统计切分出词
@@ -156,59 +165,62 @@ class Preprocess:
         # 1. [截取]规定长度的词数
         words = words[:max_len]
         # 2. 填充< unk > ,判断是否在vocab中, 不在填充 < unk >
-        sentence = [word if word in vocab_index_ else '<UNK>' for word in words]
+        sentence = [word if word in _vocab else '<UNK>' for word in words]
         # 3. 填充< start > < end >
         sentence = ['<START>'] + sentence + ['<STOP>']
         # 4. 判断长度，填充　< pad >
         sentence = sentence + ['<PAD>'] * (max_len - len(words))
         return ' '.join(sentence)
 
-    def transform_data(self, sentence, vocab):
+    def transform_data(self, sentence, _vocab):
         # 字符串切分成词
         words = sentence.split(' ')
         # 按照vocab的index进行转换
-        ids = [vocab[word] if word in vocab else vocab['<UNK>'] for word in words]
+        ids = [_vocab[word] if word in _vocab else _vocab['<UNK>'] for word in words]
         return ids
 
-    def sentence_proc_eval(self, sentence, max_len, vocab):
+    def sentence_proc_eval(self, sentence, max_len, _vocab):
         """
         单句话处理 ,方便测试
         """
         # 1. 切词处理
         sentence = self.sentence_proc(sentence)
         # 2. 填充
-        sentence = self.pad(sentence, max_len, vocab)
+        sentence = self.pad(sentence, max_len, _vocab)
         # 3. 转换index
-        sentence = self.transform_data(sentence, vocab)
+        sentence = self.transform_data(sentence, _vocab)
         return np.array([sentence])
 
 
 if __name__ == '__main__':
-
     # 初始化
     train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
     raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
-    save_text(raw_text, RAW_TEXT)
-
     user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
-    save_user_dict(user_dict, USER_DICT)
+
+    reprocess = True  # 是否重新进行预处理
+    retrain = True  # 是否重新训练词向量
 
     # 预处理阶段
-    reprocess = False  # 是否重新预处理
-    if not os.path.isfile(TRAIN_SEG) or reprocess:
-        proc = Preprocess()  # 创建个预处理类
-        print("多进程处理数据")
-        train_seg = proc.parallelize(train_df)
-        test_seg = proc.parallelize(test_df)
+    proc = Preprocess()
+    train_seg, test_seg = proc.get_seg_data(train_df, test_df, reprocess)
 
-        train_seg.to_csv(TRAIN_SEG, index=None)
-        test_seg.to_csv(TEST_SEG, index=None)
-    else:
-        train_seg, test_seg = load_dataset(TRAIN_SEG, TEST_SEG)
-
-    # 保存预处理后的文本，作为word2vec的训练材料
+    # 获取预处理后的文本，作为word2vec的训练材料
     proc_text = get_text(train_seg, test_seg)
-    save_text(raw_text, PROC_TEXT)
+
+    # 保存生成的数据
+    save_text(raw_text, RAW_TEXT)  # 保存原始文本
+    save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
+    save_text(proc_text, PROC_TEXT)  # 保存处理后的文本
+
+    # -----词向量-----
+    wv_model = get_wv_model(retrain)
+    vocab, vocab_reversed = load_vocab(VOCAB)
+    embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
+
+    # -----准备seq2seq训练数据-----
+
+
 
 # todo: 完善数据预处理，如删掉(进口)
 """

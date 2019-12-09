@@ -29,7 +29,7 @@ TEST_X = os.path.join(root, 'data', 'test_X.csv')
 
 # 词向量模型
 WV_MODEL = os.path.join(root, 'data', 'wv', 'word2vec.model')
-VOCAB_INDEX = os.path.join(root, 'data', 'wv', 'vocab_index.txt')
+VOCAB = os.path.join(root, 'data', 'wv', 'vocab_index.txt')
 EMBEDDING_MATRIX = os.path.join(root, 'data', 'wv', 'embedding_matrix.txt')
 VOCAB_INDEX_PAD = os.path.join(root, 'data', 'wv', 'vocab_index_pad.txt')
 EMBEDDING_MATRIX_PAD = os.path.join(root, 'data', 'wv', 'embedding_matrix_pad.txt')

@@ -2,46 +2,52 @@
 运行此代码可以获得：
 - word2vec.model
 """
-
 from utils.saveLoader import *
 from utils.config import *
 
-import pandas as pd
 from gensim.models.word2vec import LineSentence
 from gensim.models import word2vec
+from multiprocessing import cpu_count
 import numpy as np
 import os
 
-if __name__ == "__main__":
 
-    proc_text = pd.read_csv(PROC_TEXT, header=None)
+def get_wv_model(retrain=False):
 
-    retrain = False  # 是否重新训练
-
+    # retrain 是否重新训练
     if not os.path.isfile(WV_MODEL) or retrain:
+        if retrain:
+            print("重新", end="")
         # 如果词向量模型没有保存，则开始训练词向量
         print("开始训练词向量")
-        wv_model = word2vec.Word2Vec(LineSentence(PROC_TEXT), workers=12, min_count=5, size=300)
+        _wv_model = word2vec.Word2Vec(LineSentence(PROC_TEXT),
+                                      workers=cpu_count(),
+                                      min_count=5,
+                                      size=300,
+                                      seed=1)
 
         # 建立词表
-        vocab_index = {word: index for index, word in enumerate(wv_model.wv.index2word)}
-        index_vocab = {index: word for index, word in enumerate(wv_model.wv.index2word)}
+        _vocab = {word: index for index, word in enumerate(_wv_model.wv.index2word)}
 
         # 获取词向量矩阵
-        embedding_matrix = wv_model.wv.vectors
+        _embedding_matrix = _wv_model.wv.vectors
 
         # 保存
-        wv_model.save(WV_MODEL)  # 词向量模型
-        save_vocab(VOCAB_INDEX, vocab_index)  # vocab
-        np.savetxt(EMBEDDING_MATRIX, embedding_matrix)  # embedding
+        print("词向量训练完毕，保存词向量模型、Embedding matrix和vocab")
+        _wv_model.save(WV_MODEL)  # 词向量模型
+        save_vocab(VOCAB, _vocab)  # vocab
+        np.savetxt(EMBEDDING_MATRIX, _embedding_matrix)  # embedding
 
     else:
         print("读取已训练好的词向量")
-        wv_model = word2vec.Word2Vec.load(WV_MODEL)
-        vocab_index, index_vocab = load_vocab(VOCAB_INDEX)
-        embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
+        _wv_model = word2vec.Word2Vec.load(WV_MODEL)
+
+    return _wv_model
+
+
+if __name__ == "__main__":
+    wv_model = get_wv_model(retrain=False)
+    vocab, vocab_reversed = load_vocab(VOCAB)
+    embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
 
     # wv_model.wv.most_similar(['奇瑞'],topn=10)
-
-
-
