@@ -8,7 +8,7 @@ import numpy as np
 from gensim.models.word2vec import LineSentence
 from gensim.models import word2vec
 from utils.config import *
-from utils.loader import *
+from utils.saveLoader import *
 
 
 def pad(sentence, max_len, vocab_index_):

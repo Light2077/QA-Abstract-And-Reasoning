@@ -3,7 +3,7 @@
 - word2vec.model
 """
 
-from utils.loader import *
+from utils.saveLoader import *
 from utils.config import *
 
 import pandas as pd
