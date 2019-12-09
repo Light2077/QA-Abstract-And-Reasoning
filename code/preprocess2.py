@@ -2,8 +2,6 @@
 结合preprocess获得的预处理好的csv和word2vec的词向量模型
 进行第二次数据预处理，获取能用于训练seq2seq模型的数据集
 
-
-
 """
 import pandas as pd
 import numpy as np
@@ -11,6 +9,7 @@ from gensim.models.word2vec import LineSentence
 from gensim.models import word2vec
 from utils.config import *
 from utils.loader import *
+
 
 def pad(sentence, max_len, vocab_index_):
     """
