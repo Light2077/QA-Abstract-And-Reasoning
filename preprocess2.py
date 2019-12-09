@@ -115,7 +115,7 @@ if __name__ == '__main__':
     embedding_matrix = wv_model.wv.vectors
 
     # 保存更新后的vocab和embedding
-    save_vocab(VOCAB_INDEX_PAD, vocab_index)  # vocab
+    save_vocab(VOCAB_PAD, vocab_index)  # vocab
     np.savetxt(EMBEDDING_MATRIX_PAD, embedding_matrix)  # embedding
 
     unk_index = vocab_index['<UNK>']

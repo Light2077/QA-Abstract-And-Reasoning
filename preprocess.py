@@ -134,9 +134,9 @@ class Preprocess:
             data = pd.concat(p.map(func, data_split))
         return data
 
-    def get_seg_data(self, _train_df, _test_df, reprocess=False):
+    def get_seg_data(self, _train_df, _test_df, _reprocess=False):
         # 合并上面的操作流程，获取预处理数据集
-        if not os.path.isfile(TRAIN_SEG) or reprocess:
+        if not os.path.isfile(TRAIN_SEG) or _reprocess:
             print("多进程处理数据")
             _train_seg = self.parallelize(_train_df)
             _test_seg = self.parallelize(_test_df)
@@ -179,6 +179,15 @@ class Preprocess:
         ids = [_vocab[word] if word in _vocab else _vocab['<UNK>'] for word in words]
         return ids
 
+    def get_max_len(self, data):
+        """
+        获得合适的最大长度值
+        :param data: 待统计的数据  train_df['Question']
+        :return: 最大长度值
+        """
+        max_lens = data.apply(lambda x: x.count(' '))
+        return int(np.mean(max_lens) + 2 * np.std(max_lens))
+
     def sentence_proc_eval(self, sentence, max_len, _vocab):
         """
         单句话处理 ,方便测试
@@ -190,6 +199,86 @@ class Preprocess:
         # 3. 转换index
         sentence = self.transform_data(sentence, _vocab)
         return np.array([sentence])
+
+    def get_train_data(self):
+        print("开始为seq2seq模型进行数据预处理..")
+        _vocab, _vocab_reversed = load_vocab(VOCAB)
+
+        # 预处理数据载入
+        _train_seg = pd.read_csv(TRAIN_SEG).fillna("")
+        _test_seg = pd.read_csv(TEST_SEG).fillna("")
+
+        _train_seg['X'] = _train_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+        _test_seg['X'] = _test_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+
+        # 获取输入数据 适当的最大长度
+        train_x_max_len = self.get_max_len(_train_seg['X'])
+        test_x_max_len = self.get_max_len(_test_seg['X'])
+
+        x_max_len = max(train_x_max_len, test_x_max_len)
+
+        # 获取标签数据 适当的最大长度
+        train_y_max_len = self.get_max_len(_train_seg['Report'])
+
+        # 训练集、测试集pad
+        _train_seg['X'] = _train_seg['X'].apply(lambda x: self.pad(x, x_max_len, _vocab))
+        _train_seg['Y'] = _train_seg['Report'].apply(lambda x: self.pad(x, train_y_max_len, _vocab))
+        _test_seg['X'] = _test_seg['X'].apply(lambda x: self.pad(x, x_max_len, _vocab))
+
+        # 保存中间结果数据
+        print("保存pad中间结果数据")
+        _train_seg['X'].to_csv(TRAIN_X_PAD, index=None, header=False)
+        _train_seg['Y'].to_csv(TRAIN_Y_PAD, index=None, header=False)
+        _test_seg['X'].to_csv(TEST_X_PAD, index=None, header=False)
+
+        # add retrain词向量
+        add_train = True
+        if not os.path.isfile(WV_MODEL_PAD) or add_train:
+            print("开始增量训练词向量")
+
+            # 词向量的载入
+            _wv_model = word2vec.Word2Vec.load(WV_MODEL)
+
+            print('start retrain w2v model')
+            _wv_model.build_vocab(LineSentence(TRAIN_X_PAD), update=True)
+            _wv_model.train(LineSentence(TRAIN_X_PAD), epochs=5, total_examples=_wv_model.corpus_count)
+            print('1/3')
+            _wv_model.build_vocab(LineSentence(TRAIN_Y_PAD), update=True)
+            _wv_model.train(LineSentence(TRAIN_Y_PAD), epochs=5, total_examples=_wv_model.corpus_count)
+            print('2/3')
+            _wv_model.build_vocab(LineSentence(TEST_X_PAD), update=True)
+            _wv_model.train(LineSentence(TEST_X_PAD), epochs=5, total_examples=_wv_model.corpus_count)
+            print("retrain finished.")
+
+            # 保存新的词向量模型
+            _wv_model.save(WV_MODEL_PAD)
+        else:
+            print("读取retrained的词向量模型")
+            _wv_model = word2vec.Word2Vec.load(WV_MODEL_PAD)
+
+        # 更新vocab和embedding
+        _vocab = {word: index for index, word in enumerate(_wv_model.wv.index2word)}
+        _embedding_matrix = _wv_model.wv.vectors
+
+        # 保存更新后的vocab和embedding
+        print("保存更新后的vocab和embedding")
+        save_vocab(VOCAB_PAD, _vocab)  # vocab
+        np.savetxt(EMBEDDING_MATRIX_PAD, _embedding_matrix)  # embedding
+
+        # 将词转换成索引  [<START> 方向机 重 ...] -> [32800, 403, 986, 246, 231...]
+        train_x = _train_seg['X'].apply(lambda x: self.transform_data(x, _vocab))
+        train_y = _train_seg['Y'].apply(lambda x: self.transform_data(x, _vocab))
+        test_x = _test_seg['X'].apply(lambda x: self.transform_data(x, _vocab))
+
+        train_x = np.array(train_x.tolist())
+        train_y = np.array(train_y.tolist())
+        test_x = np.array(test_x.tolist())
+
+        # 保存数据
+        print("保存seq2seq训练数据")
+        np.save(TRAIN_X, train_x)
+        np.save(TRAIN_Y, train_y)
+        np.save(TEST_X, test_x)
 
 
 if __name__ == '__main__':
@@ -219,8 +308,7 @@ if __name__ == '__main__':
     embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
 
     # -----准备seq2seq训练数据-----
-
-
+    proc.get_train_data()
 
 # todo: 完善数据预处理，如删掉(进口)
 """

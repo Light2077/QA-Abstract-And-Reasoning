@@ -90,10 +90,8 @@ def load_train_dataset():
     """
     :return: 加载处理好的数据集
     """
-    train_x = np.loadtxt(TRAIN_X)
-    train_y = np.loadtxt(TRAIN_Y)
-    test_x = np.loadtxt(TEST_X)
-    train_x.dtype = 'float64'
-    train_y.dtype = 'float64'
-    test_x.dtype = 'float64'
+    train_x = np.load(TRAIN_X)
+    train_y = np.load(TRAIN_Y)
+    test_x = np.load(TEST_X)
+
     return train_x, train_y, test_x
