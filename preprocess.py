@@ -1,10 +1,5 @@
 """
 运行此代码可以获得：
-- raw_text.txt 原始文本
-- user_dict_new.txt 用户自定义词典
-- test_seg.csv 预处理分词后的测试集
-- train_seg.csv 预处理分词后的训练集
-- proc_text.csc 预处理后的文本
 """
 from word2vec import *
 from utils.saveLoader import *
@@ -251,6 +246,7 @@ class Preprocess:
             print("retrain finished.")
 
             # 保存新的词向量模型
+            print("保存PAD后的词向量模型")
             _wv_model.save(WV_MODEL_PAD)
         else:
             print("读取retrained的词向量模型")
@@ -283,10 +279,12 @@ class Preprocess:
 
 if __name__ == '__main__':
     # 初始化
+    start_time = time.time()
+
     train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
     raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
     user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
-
+    save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
     reprocess = True  # 是否重新进行预处理
     retrain = True  # 是否重新训练词向量
 
@@ -299,7 +297,6 @@ if __name__ == '__main__':
 
     # 保存生成的数据
     save_text(raw_text, RAW_TEXT)  # 保存原始文本
-    save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
     save_text(proc_text, PROC_TEXT)  # 保存处理后的文本
 
     # -----词向量-----
@@ -309,6 +306,8 @@ if __name__ == '__main__':
 
     # -----准备seq2seq训练数据-----
     proc.get_train_data()
+
+    print("共耗时{:.2f}s".format(start_time-time.time()))
 
 # todo: 完善数据预处理，如删掉(进口)
 """
