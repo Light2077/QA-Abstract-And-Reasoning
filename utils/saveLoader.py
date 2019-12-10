@@ -86,6 +86,10 @@ def load_vocab(path):
     return vocab_index_, index_vocab_
 
 
+def load_embedding_matrix(embed_path):
+    return np.loadtxt(embed_path)
+
+
 def load_train_dataset():
     """
     :return: 加载处理好的数据集
