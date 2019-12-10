@@ -285,7 +285,7 @@ if __name__ == '__main__':
     raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
     user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
     save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
-    reprocess = True  # 是否重新进行预处理
+    reprocess = False  # 是否重新进行预处理
     retrain = True  # 是否重新训练词向量
 
     # 预处理阶段
