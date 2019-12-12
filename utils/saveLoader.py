@@ -99,3 +99,18 @@ def load_train_dataset():
     test_x = np.load(TEST_X)
 
     return train_x, train_y, test_x
+
+
+def del_all_files_of_dir(path):
+    """
+    删除文件夹下的所有文件
+    :param path: 文件夹路径
+    :return:
+    """
+    if os.listdir(path)==[]:
+        print("there no files in this path")
+        return None
+    for file_name in os.listdir(path):
+        file = os.path.join(path, file_name)
+        print("remove file:", file_name)
+        os.remove(file)
