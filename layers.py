@@ -63,8 +63,9 @@ class Decoder(tf.keras.Model):
                                        return_sequences=True,
                                        return_state=True,
                                        recurrent_initializer='glorot_uniform')
-        # 之前好像没加softmax
-        self.fc = tf.keras.layers.Dense(vocab_size, activation="softmax")  # 为了softmax层数要保持一致
+        # 之前好像没加softmax 不需要加softmax
+        # self.fc = tf.keras.layers.Dense(vocab_size, activation="softmax")  # 为了softmax层数要保持一致
+        self.fc = tf.keras.layers.Dense(vocab_size) 
 
         # used for attention
         self.attention = BahdanauAttention(self.dec_units)
