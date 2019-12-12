@@ -36,6 +36,10 @@ def create_user_dict(*dataframe):
     return _user_dict
 
 
+def index_2_sentence(index):...
+
+
+
 class Preprocess:
     def __init__(self):
         self.stop_words = self.load_stop_words(STOP_WORDS)
