@@ -135,7 +135,7 @@ class Preprocess:
         :return: 处理后的数据
         """
         func = self.data_frame_proc
-        cores = cpu_count()
+        cores = cpu_count() // 2
 
         print("开始并行处理，核心数{}".format(cores))
 
@@ -231,8 +231,11 @@ class Preprocess:
 
         # 获取标签数据 适当的最大长度
         train_y_max_len = self.get_max_len(_train_seg['Report'])
+        print("输入句子最大长度：", x_max_len)
+        print("输出句子最大长度：", train_y_max_len)
 
         # 训练集、测试集pad
+        print("训练集、测试集pad")
         _train_seg['X'] = _train_seg['X'].apply(lambda x: self.pad(x, x_max_len, _vocab))
         _train_seg['Y'] = _train_seg['Report'].apply(lambda x: self.pad(x, train_y_max_len, _vocab))
         _test_seg['X'] = _test_seg['X'].apply(lambda x: self.pad(x, x_max_len, _vocab))
@@ -302,10 +305,10 @@ if __name__ == '__main__':
     - step2 训练词向量
     - step3 进行模型训练的预处理
     """
-    step1 = True  # 是否进行第一步
+    step1 = False  # 是否进行第一步
     reprocess = True  # 是否重新进行预处理
 
-    step2 = False  # 是否进行第二步
+    step2 = True  # 是否进行第二步
     retrain = True  # 是否重新训练词向量
 
     step3 = False  # 是否进行第三步
@@ -314,12 +317,14 @@ if __name__ == '__main__':
     start_time = time.time()  # 计时开始
     # ------step1 进行词向量训练的预处理------
     if step1:
+        print("step1 进行词向量训练的预处理")
         train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
         raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
         user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
         save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
 
         # 预处理阶段
+
         train_seg, test_seg = proc.get_seg_data(train_df, test_df, reprocess)
 
         # 获取预处理后的文本，作为word2vec的训练材料 按行保存
@@ -331,12 +336,14 @@ if __name__ == '__main__':
 
     # -----step2 训练词向量-----
     if step2:
+        print("step2 训练词向量")
         wv_model = get_wv_model(retrain)
         vocab, vocab_reversed = load_vocab(VOCAB)
         embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
 
     # -----step3 进行模型训练的预处理-----
     if step3:
+        print("step3 进行模型训练的预处理")
         proc.get_train_data()
 
     print("共耗时{:.2f}s".format(time.time()-start_time))
