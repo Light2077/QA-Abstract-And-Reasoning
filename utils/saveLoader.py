@@ -4,12 +4,13 @@ from utils.config import *
 from utils.decorator import *
 
 @count_time
-def get_text(*dataframe, columns=["Question", "Dialogue", "Report"]):
+def get_text(*dataframe, columns=["Question", "Dialogue", "Report"], concater = " "):
     """
     把训练集，测试集的文本拼接在一起
 
     :param dataframe: 传入一个包含数个df的元组
     :param columns: 要拼接的列
+    :param concater: 怎么拼接列，默认用空格拼接
     :return:
     """
     text = ""
@@ -21,7 +22,7 @@ def get_text(*dataframe, columns=["Question", "Dialogue", "Report"]):
                 proc_columns.append(col)
 
         # 把从第三列(包括)开始的数据拼在一起
-        text += "\n".join(df[proc_columns].apply(lambda x: " ".join(x), axis=1))
+        text += "\n".join(df[proc_columns].apply(lambda x: concater.join(x), axis=1))
         # text += "<end>\n".join(df.iloc[:, 3:].apply(lambda x: " ".join(["<start>"] + x.to_list()), axis=1))
 
     return text

@@ -303,29 +303,27 @@ if __name__ == '__main__':
     - step3 进行模型训练的预处理
     """
     step1 = True  # 是否进行第一步
-    step2 = True
-    step3 = True
     reprocess = True  # 是否重新进行预处理
+
+    step2 = False  # 是否进行第二步
     retrain = True  # 是否重新训练词向量
+
+    step3 = False  # 是否进行第三步
 
     proc = Preprocess()  # 不管怎样先创建一个预处理器
     start_time = time.time()  # 计时开始
     # ------step1 进行词向量训练的预处理------
     if step1:
-
-
         train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
         raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
         user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
         save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
 
-
         # 预处理阶段
-
         train_seg, test_seg = proc.get_seg_data(train_df, test_df, reprocess)
 
-        # 获取预处理后的文本，作为word2vec的训练材料
-        proc_text = get_text(train_seg, test_seg)
+        # 获取预处理后的文本，作为word2vec的训练材料 按行保存
+        proc_text = get_text(train_seg, test_seg, concater="\n")
 
         # 保存生成的数据
         save_text(raw_text, RAW_TEXT)  # 保存原始文本
