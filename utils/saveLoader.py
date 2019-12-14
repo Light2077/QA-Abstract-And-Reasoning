@@ -4,17 +4,24 @@ from utils.config import *
 from utils.decorator import *
 
 @count_time
-def get_text(*dataframe):
+def get_text(*dataframe, columns=["Question", "Dialogue", "Report"]):
     """
     把训练集，测试集的文本拼接在一起
-    :param file: 若为空则不保存文件
+
     :param dataframe: 传入一个包含数个df的元组
+    :param columns: 要拼接的列
     :return:
     """
     text = ""
     for df in dataframe:
+        # 过滤掉数据集没有的特征
+        proc_columns = []
+        for col in columns:
+            if col in df.columns:
+                proc_columns.append(col)
+
         # 把从第三列(包括)开始的数据拼在一起
-        text += "\n".join(df.iloc[:, 3:].apply(lambda x: " ".join(x.to_list()), axis=1))
+        text += "\n".join(df[proc_columns].apply(lambda x: " ".join(x), axis=1))
         # text += "<end>\n".join(df.iloc[:, 3:].apply(lambda x: " ".join(["<start>"] + x.to_list()), axis=1))
 
     return text

@@ -42,7 +42,8 @@ def index_2_sentence(index):...
 
 class Preprocess:
     def __init__(self):
-        self.stop_words = self.load_stop_words(STOP_WORDS)
+        # self.stop_words = self.load_stop_words(STOP_WORDS)
+        print("创建一个预处理器")
 
     @staticmethod
     def load_stop_words(file):
@@ -57,18 +58,31 @@ class Preprocess:
         :return: 过滤特殊字符后的字符串
         """
         if isinstance(sentence, str):
-            r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
-            res = r.sub("", sentence)
+            # 删除带括号的 进口 海外
+            r = re.compile(r"[(（]进口[)）]|\(海外\)")
+            sentence = r.sub("", sentence)
 
-            r = re.compile(r"车主说|技师说|语音|图片|你好|您好")
-            res = r.sub("", res)
+            # 删除除了汉字数字字母和，！？。.- 以外的字符
+            r = re.compile("[^，！？。\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
+            sentence = sentence.replace(",", "，")
+            sentence = sentence.replace("!", "！")
+            sentence = sentence.replace("?", "？")
+            sentence = r.sub("", sentence)
+
+            # 删除 车主说 技师说 语音 图片
+            r = re.compile(r"车主说|技师说|语音|图片")
+            sentence = r.sub("", sentence)
+
+            # r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
+            # res = r.sub("", sentence)
+            #
 
             # res = re.sub(
             #     r'[\s+\-\|\!\/\[\]\{\}_,.$%^*(+\"\')]+|[:：+——()?【】“”！，。？、~@#￥%……&*（）]+|车主说|技师说|语音|图片|你好|您好',
             #     '',
             #     res)
 
-            return res
+            return sentence
         else:
             return ''
 
@@ -92,8 +106,7 @@ class Preprocess:
         # 切词，默认精确模式，全模式cut参数cut_all=True
         words = jieba.cut(sentence)
         # 过滤停用词
-        words = self.filter_stopwords(words)
-
+        # words = self.filter_stopwords(words)
         return ' '.join(words)
 
     @count_time
@@ -282,36 +295,53 @@ class Preprocess:
 
 
 if __name__ == '__main__':
-    # 初始化
-    start_time = time.time()
 
-    train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
-    raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
-    user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
-    save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
-    reprocess = False  # 是否重新进行预处理
+    """
+    分三步
+    - step1 进行词向量训练的预处理
+    - step2 训练词向量
+    - step3 进行模型训练的预处理
+    """
+    step1 = True  # 是否进行第一步
+    step2 = True
+    step3 = True
+    reprocess = True  # 是否重新进行预处理
     retrain = True  # 是否重新训练词向量
 
-    # 预处理阶段
-    proc = Preprocess()
-    train_seg, test_seg = proc.get_seg_data(train_df, test_df, reprocess)
+    proc = Preprocess()  # 不管怎样先创建一个预处理器
+    start_time = time.time()  # 计时开始
+    # ------step1 进行词向量训练的预处理------
+    if step1:
 
-    # 获取预处理后的文本，作为word2vec的训练材料
-    proc_text = get_text(train_seg, test_seg)
 
-    # 保存生成的数据
-    save_text(raw_text, RAW_TEXT)  # 保存原始文本
-    save_text(proc_text, PROC_TEXT)  # 保存处理后的文本
+        train_df, test_df = load_dataset(TRAIN_DATA, TEST_DATA)  # 载入数据(包含了空值的处理)
+        raw_text = get_text(train_df, test_df)  # 获得原始的数据文本
+        user_dict = create_user_dict(train_df, test_df)  # 创建用户自定义词典
+        save_user_dict(user_dict, USER_DICT)  # 保存用户自定义词典
 
-    # -----词向量-----
-    wv_model = get_wv_model(retrain)
-    vocab, vocab_reversed = load_vocab(VOCAB)
-    embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
 
-    # -----准备seq2seq训练数据-----
-    proc.get_train_data()
+        # 预处理阶段
 
-    print("共耗时{:.2f}s".format(start_time-time.time()))
+        train_seg, test_seg = proc.get_seg_data(train_df, test_df, reprocess)
+
+        # 获取预处理后的文本，作为word2vec的训练材料
+        proc_text = get_text(train_seg, test_seg)
+
+        # 保存生成的数据
+        save_text(raw_text, RAW_TEXT)  # 保存原始文本
+        save_text(proc_text, PROC_TEXT)  # 保存处理后的文本
+
+    # -----step2 训练词向量-----
+    if step2:
+        wv_model = get_wv_model(retrain)
+        vocab, vocab_reversed = load_vocab(VOCAB)
+        embedding_matrix = np.loadtxt(EMBEDDING_MATRIX)
+
+    # -----step3 进行模型训练的预处理-----
+    if step3:
+        proc.get_train_data()
+
+    print("共耗时{:.2f}s".format(time.time()-start_time))
 
 # todo: 完善数据预处理，如删掉(进口)
 """
