@@ -89,7 +89,7 @@ class Vocab:
     def load_vocab(file_path, vocab_max_size=None):
         """
         读取字典
-        :param file_path: 文件路径
+        :param file_path: 文件路径 (VOCAB_PAD)
         :param vocab_max_size: 最大字典数量
         :return: 返回读取后的字典
         """

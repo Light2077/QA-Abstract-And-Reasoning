@@ -2,11 +2,11 @@
 # Created by LuoJie at 12/7/19
 import tensorflow as tf
 
-from seq2seq_tf2.model_layers import Encoder, BahdanauAttention, Decoder, Pointer
-from seq2seq_tf2.seq2seq_model import Seq2Seq
-from utils.config import save_wv_model_path
-from utils.gpu_utils import config_gpu
-from utils.wv_loader import load_embedding_matrix, Vocab
+from layers import Encoder, BahdanauAttention, Decoder, Pointer
+from seq2seq import Seq2Seq
+from utils.config import VOCAB_PAD
+from utils.config_gpu import config_gpu
+from utils.saveLoader import load_embedding_matrix, Vocab
 
 
 class PGN(tf.keras.Model):
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # GPU资源配置
     config_gpu()
     # 读取vocab训练
-    vocab, reverse_vocab = Vocab.load_vocab(save_wv_model_path)
+    vocab, reverse_vocab = Vocab.load_vocab(VOCAB_PAD)
     # 计算vocab size
     vocab_size = len(vocab)
     batch_size = 128
