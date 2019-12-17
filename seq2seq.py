@@ -53,6 +53,7 @@ class Seq2Seq(tf.keras.Model):
             dec_input = tf.expand_dims(dec_target[:, t], 1)
 
             predictions.append(pred)
+
             attentions.append(attn)
 
-        return tf.stack(predictions, 1), dec_hidden
+        return tf.stack(predictions, 1), dec_hidden, attentions

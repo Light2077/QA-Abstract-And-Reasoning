@@ -308,10 +308,10 @@ if __name__ == '__main__':
     step1 = False  # 是否进行第一步
     reprocess = True  # 是否重新进行预处理
 
-    step2 = True  # 是否进行第二步
-    retrain = True  # 是否重新训练词向量
+    step2 = False  # 是否进行第二步
+    retrain = False  # 是否重新训练词向量
 
-    step3 = False  # 是否进行第三步
+    step3 = True  # 是否进行第三步
 
     proc = Preprocess()  # 不管怎样先创建一个预处理器
     start_time = time.time()  # 计时开始

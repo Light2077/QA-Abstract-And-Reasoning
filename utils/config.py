@@ -41,3 +41,6 @@ CKPT_PREFIX = os.path.join(CKPT_DIR, "ckpt")
 
 #其他
 FONT = os.path.join(root, 'data', 'TrueType', 'simhei.ttf')
+
+# 结果
+RESULT_PATH = os.path.join(root, 'data', 'result')
