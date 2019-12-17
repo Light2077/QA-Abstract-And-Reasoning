@@ -3,8 +3,9 @@ import numpy as np
 from utils.config import *
 from utils.decorator import *
 
+
 @count_time
-def get_text(*dataframe, columns=["Question", "Dialogue", "Report"], concater = " "):
+def get_text(*dataframe, columns=["Question", "Dialogue", "Report"], concater=" "):
     """
     把训练集，测试集的文本拼接在一起
 
@@ -49,7 +50,6 @@ def save_user_dict(user_dict, file):
         f.write("\n".join(user_dict))
 
 
-
 def load_dataset(train_data_path_, test_data_path_):
     """
     数据数据集
@@ -90,12 +90,14 @@ class Vocab:
         """
         读取字典
         :param file_path: 文件路径
+        :param vocab_max_size: 最大字典数量
         :return: 返回读取后的字典
         """
+
         vocab = {}
         reverse_vocab = {}
         for line in open(file_path, "r", encoding='utf-8').readlines():
-            word, index = line.strip().split("\t")
+            word, index = line.strip().split(" ")
             index = int(index)
             # 如果vocab 超过了指定大小
             # 跳出循环 截断
@@ -153,9 +155,9 @@ def load_train_dataset():
     """
     :return: 加载处理好的数据集
     """
-    train_x = np.load(TRAIN_X)
-    train_y = np.load(TRAIN_Y)
-    test_x = np.load(TEST_X)
+    train_x = np.loadtxt(TRAIN_X, delimiter=",")
+    train_y = np.loadtxt(TRAIN_Y, delimiter=",")
+    test_x = np.loadtxt(TEST_X, delimiter=",")
 
     return train_x, train_y, test_x
 
@@ -173,3 +175,20 @@ def del_all_files_of_dir(path):
         file = os.path.join(path, file_name)
         print("remove file:", file_name)
         os.remove(file)
+
+
+def get_seg_data():
+    _train_seg = pd.read_csv(TRAIN_SEG).fillna("")
+    _test_seg = pd.read_csv(TEST_SEG).fillna("")
+
+    _train_seg['train_seg_x'] = _train_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+    _test_seg['test_seg_x'] = _test_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+    _train_seg['train_seg_y'] = _train_seg['Report']
+
+    _train_seg['train_seg_x'].to_csv(TRAIN_SEG_X, index=None)
+    _train_seg['train_seg_y'].to_csv(TRAIN_SEG_Y, index=None)
+    _test_seg['test_seg_x'].to_csv(TEST_SEG_X, index=None)
+
+    print("create: ", TRAIN_SEG_X)
+    print("create: ", TRAIN_SEG_Y)
+    print("create: ", TEST_SEG_X)

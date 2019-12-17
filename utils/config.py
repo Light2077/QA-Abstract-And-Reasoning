@@ -1,6 +1,6 @@
 import os
 import pathlib
-
+# ctrl + shift + u 一键大写
 root = pathlib.Path(os.path.abspath(__file__)).parent.parent
 
 # 原有数据
@@ -23,9 +23,13 @@ TRAIN_Y_PAD = os.path.join(root, 'data', 'train_Y_pad.csv')
 TEST_X_PAD = os.path.join(root, 'data', 'test_X_pad.csv')
 
 # 训练数据
-TRAIN_X = os.path.join(root, 'data', 'train_x.npy')
-TRAIN_Y = os.path.join(root, 'data', 'train_y.npy')
-TEST_X = os.path.join(root, 'data', 'test_x.npy')
+TRAIN_SEG_X = os.path.join(root, 'data', 'train_seg_x.csv')
+TRAIN_SEG_Y = os.path.join(root, 'data', 'train_seg_y.csv')
+TEST_SEG_X = os.path.join(root, 'data', 'test_seg_x.csv')
+
+TRAIN_X = os.path.join(root, 'data', 'train_x.txt')
+TRAIN_Y = os.path.join(root, 'data', 'train_y.txt')
+TEST_X = os.path.join(root, 'data', 'test_x.txt')
 
 # 词向量模型
 WV_MODEL = os.path.join(root, 'data', 'wv', 'word2vec.model')
@@ -41,6 +45,7 @@ CKPT_PREFIX = os.path.join(CKPT_DIR, "ckpt")
 
 #其他
 FONT = os.path.join(root, 'data', 'TrueType', 'simhei.ttf')
+PARAMS_FROM_DATASET = os.path.join(root, 'data', 'params_from_dataset.txt')
 
 # 结果
 RESULT_PATH = os.path.join(root, 'data', 'result')

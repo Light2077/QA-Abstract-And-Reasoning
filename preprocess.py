@@ -292,10 +292,9 @@ class Preprocess:
 
         # 保存数据
         print("保存seq2seq训练数据")
-        np.save(TRAIN_X, train_x)
-        np.save(TRAIN_Y, train_y)
-        np.save(TEST_X, test_x)
-
+        np.savetxt(TRAIN_X, train_x, fmt="%d", delimiter=",")
+        np.savetxt(TRAIN_Y, train_y, fmt="%d", delimiter=",")
+        np.savetxt(TEST_X, test_x, fmt="%d", delimiter=",")
 
 if __name__ == '__main__':
 
