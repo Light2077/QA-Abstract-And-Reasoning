@@ -103,16 +103,16 @@ class Decoder(tf.keras.Model):
         # attention_weights = self.attention(hidden, enc_output)
         x = self.embedding(x)
 
-        x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
+        dec_x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
         output, state = self.gru(x)
 
         # output shape (batch_size, hidden_size)
         output = tf.reshape(output, (-1, output.shape[2]))
 
         # output shape (batch_size, vocab)
-        x = self.fc(output)
+        pred = self.fc(output)
 
-        return x, state
+        return dec_x, pred, state
 
 
 class Pointer(tf.keras.layers.Layer):

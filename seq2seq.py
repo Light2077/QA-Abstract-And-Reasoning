@@ -30,10 +30,11 @@ class Seq2Seq(tf.keras.Model):
     def call_decoder_onestep(self, dec_input, dec_hidden, enc_output):
         context_vector, attention_weights = self.attention(dec_hidden, enc_output)
 
-        pred, dec_hidden = self.decoder(dec_input,
+        _, pred, dec_hidden = self.decoder(dec_input,
                                         None,
                                         None,
                                         context_vector)
+
         return pred, dec_hidden, context_vector, attention_weights
 
     def call(self, dec_input, dec_hidden, enc_output, dec_target):
