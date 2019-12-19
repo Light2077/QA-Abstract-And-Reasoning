@@ -42,14 +42,19 @@ def beam_decode(model, batch, vocab, params):
     batch_size = params['batch_size']
 
     # 单步decoder
-    def decoder_onestep(enc_output, dec_input, dec_hidden, enc_extended_inp, batch_oov_len):
+    def decoder_onestep(enc_output, dec_input, dec_hidden, enc_extended_inp, batch_oov_len,
+                        enc_pad_mask, use_coverage=True,prev_coverage=None):
         # 单个时间步 运行
         # dec_input, dec_hidden, enc_output, enc_extended_inp, batch_oov_len
-        final_preds, dec_hidden, context_vector, attention_weights, p_gens = model.call_decoder_onestep(dec_input,
-                                                                                                        dec_hidden,
-                                                                                                        enc_output,
-                                                                                                        enc_extended_inp,
-                                                                                                        batch_oov_len)
+        final_preds, dec_hidden, context_vector, \
+        attention_weights, p_gens, coverage_ret = model.call_decoder_onestep(dec_input,
+                                                                            dec_hidden,
+                                                                            enc_output,
+                                                                            enc_extended_inp,
+                                                                            batch_oov_len,
+                                                                            enc_pad_mask,
+                                                                            use_coverage,
+                                                                            prev_coverage)
         # 拿到top k个index 和 概率
         top_k_probs, top_k_ids = tf.nn.top_k(tf.squeeze(final_preds), k=params["beam_size"] * 2)
         # 计算log概率
@@ -62,7 +67,8 @@ def beam_decode(model, batch, vocab, params):
             "attention_weights": attention_weights,
             "top_k_ids": top_k_ids,
             "top_k_log_probs": top_k_log_probs,
-            "p_gen": p_gens}
+            "p_gen": p_gens,
+            "coverage_ret": coverage_ret}
 
         # 返回需要保存的中间结果和概率
         return results
@@ -88,6 +94,8 @@ def beam_decode(model, batch, vocab, params):
     batch_oov_len = batch[0]["max_oov_len"]
 
     # 长度还不够 并且 结果还不够 继续搜索
+    prev_coverage = None
+
     while steps < params['max_dec_len'] and len(results) < params['beam_size']:
         # 获取最新待使用的token
         latest_tokens = [h.latest_token for h in hyps]
@@ -100,15 +108,19 @@ def beam_decode(model, batch, vocab, params):
         dec_hidden = tf.stack(hiddens, axis=0)
 
         # 单步运行decoder 计算需要的值
+
         decoder_results = decoder_onestep(enc_output,
                                           dec_input,
                                           dec_hidden,
                                           enc_extended_inp,
-                                          batch_oov_len)
+                                          batch_oov_len,
+                                          enc_pad_mask=batch[0]["sample_encoder_pad_mask"],
+                                          use_coverage=True,
+                                          prev_coverage=prev_coverage)
 
         # preds = decoder_results['final_dists']
         # context_vector = decoder_results['last_context_vector']
-
+        prev_coverage = decoder_results['coverage_ret']
         dec_hidden = decoder_results['dec_hidden']
         attention_weights = decoder_results['attention_weights']
         top_k_log_probs = decoder_results['top_k_log_probs']

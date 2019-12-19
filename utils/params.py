@@ -3,11 +3,12 @@ import argparse
 from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
 
-EPOCH = 1
-BATCH_SIZE = 4
+EPOCH = 2
+BATCH_SIZE = 64
+
+
 def get_params_from_dataset(check=False):
     """
-
     :param check: bool 是否重新检查参数
     :return:
     """
@@ -15,7 +16,7 @@ def get_params_from_dataset(check=False):
         print("开始check数据集参数")
         params_from_dataset = {}
         train_x, train_y, test_x = load_train_dataset()
-        embedding = load_embedding_matrix(EMBEDDING_MATRIX_PAD)
+        embedding = load_embedding_matrix()
 
         params_from_dataset['n_samples'] = train_x.shape[0]
         params_from_dataset['max_enc_len'] = train_x.shape[1]
@@ -23,22 +24,22 @@ def get_params_from_dataset(check=False):
         params_from_dataset['embed_size'] = embedding.shape[1]
         print("开始写入参数")
         with open(PARAMS_FROM_DATASET, mode="w", encoding="utf-8") as f:
-            for k,v in params_from_dataset.items():
-                f.write(k + "," + str(v) + "\n" )
+            for k, v in params_from_dataset.items():
+                f.write(k + "," + str(v) + "\n")
     else:
-        params_from_dataset={}
+        params_from_dataset = {}
         for line in open(PARAMS_FROM_DATASET, "r", encoding='utf-8').readlines():
             k, v = line.strip().split(",")
-            params_from_dataset[k]=int(v)
+            params_from_dataset[k] = int(v)
 
     return params_from_dataset
+
 
 def get_params():
     vocab = Vocab(VOCAB_PAD)
 
     params_from_dataset = get_params_from_dataset()
     
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--mode", default='train', help="run mode", type=str)
@@ -71,7 +72,6 @@ def get_params():
                         help="beam size for beam search decoding (must be equal to batch size in decode mode)",
                         type=int)
 
-
     parser.add_argument("--embed_size",
                         default=params_from_dataset['embed_size'],
                         help="Words embeddings dimension",
@@ -83,7 +83,7 @@ def get_params():
                             result dimension - this result is used to compute the attention weights",
                         type=int)
 
-    parser.add_argument("--train_seg_x_dir", default=TRAIN_SEG_X , help="train_seg_x_dir", type=str)
+    parser.add_argument("--train_seg_x_dir", default=TRAIN_SEG_X, help="train_seg_x_dir", type=str)
     parser.add_argument("--train_seg_y_dir", default=TRAIN_SEG_Y, help="train_seg_y_dir", type=str)
     parser.add_argument("--test_seg_x_dir", default=TEST_SEG_X, help="train_seg_x_dir", type=str)
 
@@ -99,10 +99,14 @@ def get_params():
     parser.add_argument("--save_batch_train_data", default=False, help="save batch train data to pickle", type=bool)
     parser.add_argument("--load_batch_train_data", default=False, help="load batch train data from pickle", type=bool)
 
-    args = parser.parse_args()
-    params = vars(args)
+    parser.add_argument("--test_save_dir", default=TEST_SAVE_DIR, help="load batch train data from pickle", type=bool)
 
-    return params
+    args = parser.parse_args()
+    _params = vars(args)
+
+    return _params
+
+
 """ 使用方法：
 新建一个文件xx.py
 from utils.params import get_params
@@ -114,38 +118,41 @@ params = get_params()
 
 """
 
+
 def get_default_params():
     vocab = Vocab(VOCAB_PAD)
 
     params_from_dataset = get_params_from_dataset()
     max_train_steps = params_from_dataset['n_samples'] // BATCH_SIZE + 1
 
-    params = {'mode': 'train',
-              'max_enc_len': params_from_dataset['max_enc_len'],
-              'max_dec_len': params_from_dataset['max_dec_len'],
-              'batch_size': BATCH_SIZE,
-              'epochs': EPOCH,
-              'vocab_path': VOCAB_PAD,
-              'learning_rate': 0.015,
-              'adagrad_init_acc': 0.1,
-              'max_grad_norm': 0.8,
-              'vocab_size': vocab.count,
-              'beam_size': 3,
-              'embed_size': params_from_dataset['embed_size'],
-              'enc_units': 256,
-              'dec_units': 256,
-              'attn_units': 128,
-              'train_seg_x_dir': TRAIN_SEG_X,
-              'train_seg_y_dir': TRAIN_SEG_Y,
+    _params = {'mode': 'train',
+               'max_enc_len': params_from_dataset['max_enc_len'],
+               'max_dec_len': params_from_dataset['max_dec_len'],
+               'batch_size': BATCH_SIZE,
+               'epochs': EPOCH,
+               'vocab_path': VOCAB_PAD,
+               'learning_rate': 0.015,
+               'adagrad_init_acc': 0.1,
+               'max_grad_norm': 0.8,
+               'vocab_size': vocab.count,
+               'beam_size': 3,
+               'embed_size': params_from_dataset['embed_size'],
+               'enc_units': 256,
+               'dec_units': 256,
+               'attn_units': 128,
+               'train_seg_x_dir': TRAIN_SEG_X,
+               'train_seg_y_dir': TRAIN_SEG_Y,
 
-              'max_train_steps': max_train_steps,
-              'train_pickle_dir': TRAIN_PICKLE_DIR,
-              'save_batch_train_data': False,
-              'load_batch_train_data': False,
-              'test_seg_x_dir': TEST_SEG_X,
-              'min_dec_steps': 4,
-              'checkpoints_save_steps': 2}
-    return params
+               'max_train_steps': max_train_steps,
+               'train_pickle_dir': TRAIN_PICKLE_DIR,
+               'save_batch_train_data': False,
+               'load_batch_train_data': False,
+               'test_seg_x_dir': TEST_SEG_X,
+               'min_dec_steps': 4,
+               'checkpoints_save_steps': 2,
+               'test_save_dir': TEST_SAVE_DIR}
+    return _params
+
 
 if __name__ == "__main__":
     # get_params_from_dataset(check=True)

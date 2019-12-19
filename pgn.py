@@ -37,20 +37,26 @@ class PGN(tf.keras.Model):
         enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden)
         return enc_output, enc_hidden
 
-    def call_decoder_onestep(self, dec_input, dec_hidden, enc_output, enc_extended_inp, batch_oov_len):
+    def call_decoder_onestep(self, dec_input, dec_hidden, enc_output, enc_extended_inp, batch_oov_len,
+                             enc_pad_mask, use_coverage=True, prev_coverage=None):
 
-        context_vector, attention_weights = self.attention(dec_hidden, enc_output)
+        context_vector, attention_weights, coverage_ret = self.attention(dec_hidden,
+                                                                         enc_output,
+                                                                         enc_pad_mask,
+                                                                         use_coverage,
+                                                                         prev_coverage)
 
         dec_x, pred, dec_hidden = self.decoder(dec_input,
                                                dec_hidden,
                                                enc_output,
                                                context_vector)
+
         p_gen = self.pointer(context_vector, dec_hidden, tf.squeeze(dec_x, axis=1))
 
         final_dists = _calc_final_dist(enc_extended_inp, [pred], [attention_weights], [p_gen], batch_oov_len,
                                        self.params["vocab_size"], self.params["batch_size"])
 
-        return tf.stack(final_dists, 1), dec_hidden, context_vector, attention_weights, p_gen
+        return tf.stack(final_dists, 1), dec_hidden, context_vector, attention_weights, p_gen, coverage_ret
         # return pred, dec_hidden, context_vector, attention_weights
 
     def call(self, dec_input, dec_hidden, enc_output,

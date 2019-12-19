@@ -50,3 +50,4 @@ PARAMS_FROM_DATASET = os.path.join(root, 'data', 'params_from_dataset.txt')
 # 结果
 RESULT_PATH = os.path.join(root, 'data', 'result')
 TRAIN_PICKLE_DIR = os.path.join(root, 'data', 'dataset')
+TEST_SAVE_DIR = os.path.join(root, 'data', 'result')

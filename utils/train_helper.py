@@ -62,6 +62,7 @@ def train_model(model, vocab, params, checkpoint_manager):
                                                           enc_pad_mask=enc_pad_mask,
                                                           use_coverage=True,
                                                           prev_coverage=None)
+
             # print('dec_target is :{}'.format(dec_target))
             # print('predictions is :{}'.format(predictions.shape))
             # print('dec_target is :{}'.format(dec_target.shape))
@@ -116,9 +117,13 @@ def train_model(model, vocab, params, checkpoint_manager):
                 print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                              step,
                                                              batch_loss.numpy()))
-            if step > 10:
-                print("my break")
+
+            if step >= params["max_train_steps"]:
                 break
+            # delete this part which is use to test if it can run
+            # if step > 10:
+            #     print("my break")
+            #     break
 
         # saving (checkpoint) the model every 2 epochs
         if (epoch + 1) % params["checkpoints_save_steps"] == 0:

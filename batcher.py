@@ -103,7 +103,7 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
         dataset_2 = tf.data.TextLineDataset(params["train_seg_y_dir"])
 
         train_dataset = tf.data.Dataset.zip((dataset_1, dataset_2))
-        train_dataset = train_dataset.shuffle(10, reshuffle_each_iteration=True).repeat()
+        train_dataset = train_dataset.shuffle(params["batch_size"]*2+1, reshuffle_each_iteration=True).repeat()
 
         for raw_record in train_dataset:
             article = raw_record[0].numpy().decode("utf-8")
@@ -144,12 +144,14 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
                 "article": article,
                 "abstract": abstract,
                 "abstract_sents": abstract,
+                # 多加了2行
                 "sample_decoder_pad_mask": sample_decoder_pad_mask,
                 "sample_encoder_pad_mask": sample_encoder_pad_mask
             }
             yield output
     # 如果mode!="train" 则产生测试集数据
     else:
+        print("mode=test")
         train_dataset = tf.data.TextLineDataset(params["test_seg_x_dir"])
         for raw_record in train_dataset:
             # import pdb
@@ -161,6 +163,9 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
             enc_input = [vocab.word_to_id(w) for w in article_words]
             enc_input_extend_vocab, article_oovs = article_to_ids(article_words, vocab)
 
+            # 添加mark标记
+            sample_encoder_pad_mask = [1 for _ in range(enc_len)]
+
             output = {
                 "enc_len": enc_len,
                 "enc_input": enc_input,
@@ -171,9 +176,11 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
                 "dec_len": params["max_dec_len"],  # 51
                 "article": article,
                 "abstract": '',
-                "abstract_sents": ''
+                "abstract_sents": '',
+                "sample_decoder_pad_mask": [],
+                "sample_encoder_pad_mask": sample_encoder_pad_mask
             }
-            # 每一批的数据都一样阿
+            # 每一批的数据都一样阿, 是的是为了beam search
             for _ in range(batch_size):
                 yield output
 

@@ -7,6 +7,7 @@ class Encoder(tf.keras.Model):
         self.batch_sz = batch_sz
         self.enc_units = enc_units # whats this
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim,weights=[embedding_matrix],trainable=False)
+
         self.gru = tf.keras.layers.GRU(self.enc_units,
                                        return_sequences=True,
                                        return_state=True,
@@ -53,6 +54,7 @@ class BahdanauAttention(tf.keras.layers.Layer):
 
             attention_weights = tf.nn.softmax(masked_score, axis=1)
             coverage = attention_weights + prev_coverage
+
         else:
             # score shape == (batch_size, max_length, 1)
             # we get 1 at the last axis because we are applying score to self.V
