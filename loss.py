@@ -26,7 +26,7 @@ def coverage_loss(attn_dists, coverages, padding_mask):
 
     # coverage_loss = mask_and_avg(cover_losses, padding_mask)
     loss = tf.reduce_sum(tf.reduce_mean(cover_losses, axis=0))
-    tf.print('coverage loss(batch sum):', loss)
+    # tf.print('coverage loss(batch sum):', loss)
     return loss
 
 

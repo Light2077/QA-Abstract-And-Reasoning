@@ -4,7 +4,7 @@ from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
 
 EPOCH = 1
-
+BATCH_SIZE = 4
 def get_params_from_dataset(check=False):
     """
 
@@ -37,7 +37,7 @@ def get_params():
     vocab = Vocab(VOCAB_PAD)
 
     params_from_dataset = get_params_from_dataset()
-    batch_size = 32
+    
 
     parser = argparse.ArgumentParser()
 
@@ -53,7 +53,7 @@ def get_params():
                         help="Decoder input max sequence length",
                         type=int)
 
-    parser.add_argument("--batch_size", default=batch_size, help="batch size", type=int)
+    parser.add_argument("--batch_size", default=BATCH_SIZE, help="batch size", type=int)
     parser.add_argument("--epochs", default=EPOCH, help="train epochs", type=int)
     parser.add_argument("--vocab_path", default=VOCAB_PAD, help="vocab path", type=str)
     parser.add_argument("--learning_rate", default=1e-2, help="Learning rate", type=float)
@@ -92,7 +92,7 @@ def get_params():
     # 这个该如何确定？
     parser.add_argument("--min_dec_steps", default=4, help="min_dec_steps", type=int)
 
-    max_train_steps = params_from_dataset['n_samples']//batch_size + 1
+    max_train_steps = params_from_dataset['n_samples']//BATCH_SIZE + 1
     parser.add_argument("--max_train_steps", default=max_train_steps, help="max_train_steps", type=int)
 
     parser.add_argument("--train_pickle_dir", default=TRAIN_PICKLE_DIR, help="train_pickle_dir", type=str)
@@ -118,13 +118,12 @@ def get_default_params():
     vocab = Vocab(VOCAB_PAD)
 
     params_from_dataset = get_params_from_dataset()
-    batch_size = 32
-    max_train_steps = params_from_dataset['n_samples'] // batch_size + 1
+    max_train_steps = params_from_dataset['n_samples'] // BATCH_SIZE + 1
 
     params = {'mode': 'train',
               'max_enc_len': params_from_dataset['max_enc_len'],
               'max_dec_len': params_from_dataset['max_dec_len'],
-              'batch_size': batch_size,
+              'batch_size': BATCH_SIZE,
               'epochs': EPOCH,
               'vocab_path': VOCAB_PAD,
               'learning_rate': 0.015,

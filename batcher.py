@@ -241,7 +241,7 @@ def batch_generator(generator, params, vocab, max_enc_len, max_dec_len, batch_si
                                    padded_shapes=({"enc_len": [],
                                                    "enc_input": [None],
                                                    "enc_input_extend_vocab": [None],
-                                                   "article_oovs": [None],
+                                                   "article_oovs": [None],  # 以最长的为准
                                                    "dec_input": [max_dec_len],  # 填充的长度
                                                    "target": [max_dec_len],
                                                    "dec_len": [],

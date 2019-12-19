@@ -26,27 +26,30 @@ def train_model(model, vocab, params, checkpoint_manager):
     def loss_function(real, pred, padding_mask):
         loss = 0
         for t in range(real.shape[1]):
-            if padding_mask:
+            # if padding_mask:
+            try:
+                # real[:,t] shape (batch_size, ) (32, ) 表示这批样本的第t个词
+                # pred[:, t, :] shape （batch_size, vocab_size) (32, 32252) 表示这批样本，第t个词的概率分布
                 loss_ = loss_object(real[:, t], pred[:, t, :])
                 mask = tf.cast(padding_mask[:, t], dtype=loss_.dtype)
                 loss_ *= mask
                 loss_ = tf.reduce_mean(loss_, axis=0)  # batch-wise
                 loss += loss_
-            else:
+            # else:
+            except:
                 loss_ = loss_object(real[:, t], pred[:, t, :])
                 loss_ = tf.reduce_mean(loss_, axis=0)  # batch-wise
                 loss += loss_
         return tf.reduce_mean(loss)
 
     # 训练
-    @tf.function
+    # @tf.function
     def train_step(enc_inp, extended_enc_input, max_oov_len,
                    dec_input, dec_target, cov_loss_wt,
                    enc_pad_mask, padding_mask=None):
         batch_loss = 0
         with tf.GradientTape() as tape:
             enc_output, enc_hidden = model.call_encoder(enc_inp)
-
             # 第一个隐藏层输入
             dec_hidden = enc_hidden
             # 逐个预测序列
@@ -59,7 +62,6 @@ def train_model(model, vocab, params, checkpoint_manager):
                                                           enc_pad_mask=enc_pad_mask,
                                                           use_coverage=True,
                                                           prev_coverage=None)
-
             # print('dec_target is :{}'.format(dec_target))
             # print('predictions is :{}'.format(predictions.shape))
             # print('dec_target is :{}'.format(dec_target.shape))
@@ -77,15 +79,13 @@ def train_model(model, vocab, params, checkpoint_manager):
 
             batch_loss = loss_function(dec_target, predictions, padding_mask) + \
                          cov_loss_wt * coverage_loss(attentions, coverages, padding_mask)
+        # variables = model.encoder.trainable_variables + model.decoder.trainable_variables + \
+        #             model.attention.trainable_variables + model.pointer.trainable_variables
+        variables = model.trainable_variables
+        gradients = tape.gradient(batch_loss, variables)
+        optimizer.apply_gradients(zip(gradients, variables))
 
-            variables = model.encoder.trainable_variables + model.decoder.trainable_variables + \
-                        model.attention.trainable_variables + model.pointer.trainable_variables
-
-            gradients = tape.gradient(batch_loss, variables)
-
-            optimizer.apply_gradients(zip(gradients, variables))
-
-            return batch_loss
+        return batch_loss
 
     for epoch in range(epochs):
         start = time.time()
@@ -117,7 +117,9 @@ def train_model(model, vocab, params, checkpoint_manager):
                                                              step,
                                                              batch_loss.numpy()))
             if step > 10:
+                print("my break")
                 break
+
         # saving (checkpoint) the model every 2 epochs
         if (epoch + 1) % params["checkpoints_save_steps"] == 0:
             ckpt_save_path = checkpoint_manager.save()

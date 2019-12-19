@@ -18,7 +18,7 @@ def train(params):
     # GPU资源配置
     config_gpu()
     # 读取vocab训练
-    print("Building the model ...")
+    print("Building vocab ...")
     vocab = Vocab(params["vocab_path"], params["vocab_size"])
 
     # 构建模型
@@ -26,7 +26,7 @@ def train(params):
     # model = Seq2Seq(params)
     model = PGN(params)
 
-    print("Creating the batcher ...")
+    # print("Creating the batcher ...")
     # dataset = batcher(params["train_seg_x_dir"], params["train_seg_y_dir"], vocab, params)
     # print('dataset is ', dataset)
 
