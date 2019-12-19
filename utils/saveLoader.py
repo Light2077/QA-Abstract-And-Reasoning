@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import pickle
 from utils.config import *
 from utils.decorator import *
 
@@ -147,8 +148,8 @@ def load_vocab(path):
     return vocab_index_, index_vocab_
 
 
-def load_embedding_matrix(embed_path):
-    return np.loadtxt(embed_path)
+def load_embedding_matrix():
+    return np.loadtxt(EMBEDDING_MATRIX_PAD)
 
 
 def load_train_dataset():
@@ -192,3 +193,15 @@ def get_seg_data():
     print("create: ", TRAIN_SEG_X)
     print("create: ", TRAIN_SEG_Y)
     print("create: ", TEST_SEG_X)
+
+
+
+def save_pickle(batch_data, pickle_path):
+    f = open(pickle_path, 'wb')
+    pickle.dump(batch_data, f)
+
+
+def load_pickle(pickle_path):
+    f = open(pickle_path, 'rb')
+    batch_data = pickle.load(f)
+    return batch_data

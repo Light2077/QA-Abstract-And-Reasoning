@@ -1,8 +1,25 @@
 from utils.saveLoader import Vocab
+from utils.saveLoader import save_pickle, load_pickle
+from utils.config import *
+from utils.params import get_params
 import tensorflow as tf
 import os
 
 def article_to_ids(article_words, vocab):
+    """
+    把words列表转为index列表，并返回oov词的列表
+
+    :param article_words: [word_1, word_2, ... , word_n]
+    :param vocab: vocab
+    :return:
+        ids:[321, 432, ... , 1088]
+        oovs: [word23, word45, ... ]
+
+    vocab 表之外的词的index变为 vocab_size + oov_num
+    例： oovs: [oov1, oov2] vocab_size: 1000
+    oov1 index: 1001
+    oov2 index: 1002
+    """
     ids = []
     oovs = []
     unk_id = vocab.word_to_id(Vocab.UNKNOWN_TOKEN)
@@ -131,6 +148,7 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
                 "sample_encoder_pad_mask": sample_encoder_pad_mask
             }
             yield output
+    # 如果mode!="train" 则产生测试集数据
     else:
         train_dataset = tf.data.TextLineDataset(params["test_seg_x_dir"])
         for raw_record in train_dataset:
@@ -150,18 +168,19 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
                 "article_oovs": article_oovs,
                 "dec_input": [],
                 "target": [],
-                "dec_len": 41,
+                "dec_len": params["max_dec_len"],  # 51
                 "article": article,
                 "abstract": '',
                 "abstract_sents": ''
             }
+            # 每一批的数据都一样阿
             for _ in range(batch_size):
                 yield output
 
 
 def save_example_dataset(params):
     # vocab 对象
-    vocab = Vocab(vocab_path)
+    vocab = Vocab(params["vocab_path"])
     # 获取batch data
     dataset = batcher(vocab, params)
     # 批量保存一轮数据
@@ -216,13 +235,14 @@ def batch_generator(generator, params, vocab, max_enc_len, max_dec_len, batch_si
             "sample_decoder_pad_mask": [None],
             "sample_encoder_pad_mask": [None]
         })
-
+    # 同时分批次，并且pad填充词
+    # 每批样本是不等长的，但是最长不超过max_enc_len
     dataset = dataset.padded_batch(batch_size,
                                    padded_shapes=({"enc_len": [],
                                                    "enc_input": [None],
                                                    "enc_input_extend_vocab": [None],
                                                    "article_oovs": [None],
-                                                   "dec_input": [max_dec_len],
+                                                   "dec_input": [max_dec_len],  # 填充的长度
                                                    "target": [max_dec_len],
                                                    "dec_len": [],
                                                    "article": [],

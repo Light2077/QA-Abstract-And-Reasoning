@@ -3,6 +3,7 @@ import argparse
 from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
 
+EPOCH = 1
 
 def get_params_from_dataset(check=False):
     """
@@ -36,7 +37,7 @@ def get_params():
     vocab = Vocab(VOCAB_PAD)
 
     params_from_dataset = get_params_from_dataset()
-    batch_size = 64
+    batch_size = 32
 
     parser = argparse.ArgumentParser()
 
@@ -52,8 +53,8 @@ def get_params():
                         help="Decoder input max sequence length",
                         type=int)
 
-    parser.add_argument("--batch_size", default=64, help="batch size", type=int)
-    parser.add_argument("--epochs", default=4, help="train epochs", type=int)
+    parser.add_argument("--batch_size", default=batch_size, help="batch size", type=int)
+    parser.add_argument("--epochs", default=EPOCH, help="train epochs", type=int)
     parser.add_argument("--vocab_path", default=VOCAB_PAD, help="vocab path", type=str)
     parser.add_argument("--learning_rate", default=1e-2, help="Learning rate", type=float)
     parser.add_argument("--adagrad_init_acc", default=0.1,
@@ -78,7 +79,7 @@ def get_params():
 
     parser.add_argument("--enc_units", default=256, help="Encoder GRU cell units number", type=int)
     parser.add_argument("--dec_units", default=256, help="Decoder GRU cell units number", type=int)
-    parser.add_argument("--attn_units", default=batch_size, help="[context vector, decoder state, decoder input] feedforward \
+    parser.add_argument("--attn_units", default=128, help="[context vector, decoder state, decoder input] feedforward \
                             result dimension - this result is used to compute the attention weights",
                         type=int)
 
@@ -94,7 +95,7 @@ def get_params():
     max_train_steps = params_from_dataset['n_samples']//batch_size + 1
     parser.add_argument("--max_train_steps", default=max_train_steps, help="max_train_steps", type=int)
 
-    parser.add_argument("--train_pickle_dir", default='/opt/kaikeba/dataset/', help="train_pickle_dir", type=str)
+    parser.add_argument("--train_pickle_dir", default=TRAIN_PICKLE_DIR, help="train_pickle_dir", type=str)
     parser.add_argument("--save_batch_train_data", default=False, help="save batch train data to pickle", type=bool)
     parser.add_argument("--load_batch_train_data", default=False, help="load batch train data from pickle", type=bool)
 
@@ -114,31 +115,37 @@ params = get_params()
 """
 
 def get_default_params():
+    vocab = Vocab(VOCAB_PAD)
+
+    params_from_dataset = get_params_from_dataset()
+    batch_size = 32
+    max_train_steps = params_from_dataset['n_samples'] // batch_size + 1
+
     params = {'mode': 'train',
-              'max_enc_len': 200,
-              'max_dec_len': 41,
-              'batch_size': 3,
-              'epochs': 5,
+              'max_enc_len': params_from_dataset['max_enc_len'],
+              'max_dec_len': params_from_dataset['max_dec_len'],
+              'batch_size': batch_size,
+              'epochs': EPOCH,
               'vocab_path': VOCAB_PAD,
               'learning_rate': 0.015,
               'adagrad_init_acc': 0.1,
               'max_grad_norm': 0.8,
-              'vocab_size': 31820,
+              'vocab_size': vocab.count,
               'beam_size': 3,
-              'embed_size': 500,
-              'enc_units': 512,
-              'dec_units': 512,
-              'attn_units': 256,
-              'train_seg_x_dir': TRAIN_X,
-              'train_seg_y_dir': TRAIN_Y,
+              'embed_size': params_from_dataset['embed_size'],
+              'enc_units': 256,
+              'dec_units': 256,
+              'attn_units': 128,
+              'train_seg_x_dir': TRAIN_SEG_X,
+              'train_seg_y_dir': TRAIN_SEG_Y,
 
-              'max_train_steps': 1250,
-              'train_pickle_dir': '/opt/kaikeba/dataset/',
+              'max_train_steps': max_train_steps,
+              'train_pickle_dir': TRAIN_PICKLE_DIR,
               'save_batch_train_data': False,
               'load_batch_train_data': False,
-              'test_seg_x_dir': TEST_X,
+              'test_seg_x_dir': TEST_SEG_X,
               'min_dec_steps': 4,
-              'checkpoints_save_steps': 5}
+              'checkpoints_save_steps': 2}
     return params
 
 if __name__ == "__main__":

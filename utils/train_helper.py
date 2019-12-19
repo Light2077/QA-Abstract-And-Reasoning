@@ -116,9 +116,10 @@ def train_model(model, vocab, params, checkpoint_manager):
                 print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                              step,
                                                              batch_loss.numpy()))
-
+            if step > 10:
+                break
         # saving (checkpoint) the model every 2 epochs
-        if (epoch + 1) % 2 == 0:
+        if (epoch + 1) % params["checkpoints_save_steps"] == 0:
             ckpt_save_path = checkpoint_manager.save()
             print('Saving checkpoint for epoch {} at {}'.format(epoch + 1,
                                                                 ckpt_save_path))
