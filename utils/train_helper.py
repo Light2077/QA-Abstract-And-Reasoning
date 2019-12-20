@@ -59,7 +59,7 @@ def train_model(model, vocab, params, checkpoint_manager):
     def train_step(enc_inp, extended_enc_input, max_oov_len,
                    dec_input, dec_target, cov_loss_wt,
                    enc_pad_mask, padding_mask=None):
-        batch_loss = 0
+        # batch_loss = 0
         with tf.GradientTape() as tape:
             enc_output, enc_hidden = model.call_encoder(enc_inp)
             # 第一个隐藏层输入
