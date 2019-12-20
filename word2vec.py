@@ -22,10 +22,10 @@ def get_wv_model(retrain=False):
         print("开始训练词向量")
         _wv_model = word2vec.Word2Vec(LineSentence(PROC_TEXT),
                                       workers=cpu_count(),
-                                      min_count=5,
+                                      min_count=20,
                                       sg=1,  # skip-gram
                                       size=300,
-                                      iter=50,
+                                      iter=10,
                                       seed=1)
 
         # 建立词表

@@ -43,6 +43,7 @@ def get_params():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--mode", default='train', help="run mode", type=str)
+    parser.add_argument("--decode_mode", default='greedy', help="decode mode greedy/beam", type=str)
 
     parser.add_argument("--max_enc_len",
                         default=params_from_dataset['max_enc_len'],
@@ -57,7 +58,7 @@ def get_params():
     parser.add_argument("--batch_size", default=BATCH_SIZE, help="batch size", type=int)
     parser.add_argument("--epochs", default=EPOCH, help="train epochs", type=int)
     parser.add_argument("--vocab_path", default=VOCAB_PAD, help="vocab path", type=str)
-    parser.add_argument("--learning_rate", default=1e-2, help="Learning rate", type=float)
+    parser.add_argument("--learning_rate", default=0.01, help="Learning rate", type=float)
     parser.add_argument("--adagrad_init_acc", default=0.1,
                         help="Adagrad optimizer initial accumulator value. "
                              "Please refer to the Adagrad optimizer API documentation "
@@ -79,7 +80,7 @@ def get_params():
 
     parser.add_argument("--enc_units", default=256, help="Encoder GRU cell units number", type=int)
     parser.add_argument("--dec_units", default=256, help="Decoder GRU cell units number", type=int)
-    parser.add_argument("--attn_units", default=128, help="[context vector, decoder state, decoder input] feedforward \
+    parser.add_argument("--attn_units", default=10, help="[context vector, decoder state, decoder input] feedforward \
                             result dimension - this result is used to compute the attention weights",
                         type=int)
 
@@ -100,6 +101,9 @@ def get_params():
     parser.add_argument("--load_batch_train_data", default=False, help="load batch train data from pickle", type=bool)
 
     parser.add_argument("--test_save_dir", default=TEST_SAVE_DIR, help="load batch train data from pickle", type=bool)
+
+    # new
+    parser.add_argument("--test_run", default=False, help="test trainable", type=bool)
 
     args = parser.parse_args()
     _params = vars(args)
@@ -126,12 +130,13 @@ def get_default_params():
     max_train_steps = params_from_dataset['n_samples'] // BATCH_SIZE + 1
 
     _params = {'mode': 'train',
+               'decode_mode': "greedy",
                'max_enc_len': params_from_dataset['max_enc_len'],
                'max_dec_len': params_from_dataset['max_dec_len'],
                'batch_size': BATCH_SIZE,
                'epochs': EPOCH,
                'vocab_path': VOCAB_PAD,
-               'learning_rate': 0.015,
+               'learning_rate': 0.01,
                'adagrad_init_acc': 0.1,
                'max_grad_norm': 0.8,
                'vocab_size': vocab.count,
@@ -139,7 +144,7 @@ def get_default_params():
                'embed_size': params_from_dataset['embed_size'],
                'enc_units': 256,
                'dec_units': 256,
-               'attn_units': 128,
+               'attn_units': 10,
                'train_seg_x_dir': TRAIN_SEG_X,
                'train_seg_y_dir': TRAIN_SEG_Y,
 
@@ -150,7 +155,8 @@ def get_default_params():
                'test_seg_x_dir': TEST_SEG_X,
                'min_dec_steps': 4,
                'checkpoints_save_steps': 2,
-               'test_save_dir': TEST_SAVE_DIR}
+               'test_save_dir': TEST_SAVE_DIR,
+               'test_run': False}
     return _params
 
 

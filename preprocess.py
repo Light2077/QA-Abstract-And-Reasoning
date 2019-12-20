@@ -42,7 +42,7 @@ def index_2_sentence(index):...
 
 class Preprocess:
     def __init__(self):
-        # self.stop_words = self.load_stop_words(STOP_WORDS)
+        self.stop_words = self.load_stop_words(STOP_WORDS)
         print("创建一个预处理器")
 
     @staticmethod
@@ -63,10 +63,12 @@ class Preprocess:
             sentence = r.sub("", sentence)
 
             # 删除除了汉字数字字母和，！？。.- 以外的字符
-            r = re.compile("[^，！？。\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
-            sentence = sentence.replace(",", "，")
-            sentence = sentence.replace("!", "！")
-            sentence = sentence.replace("?", "？")
+            # r = re.compile("[^，！？。\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
+            # sentence = sentence.replace(",", "，")
+            # sentence = sentence.replace("!", "！")
+            # sentence = sentence.replace("?", "？")
+            r = re.compile("[^\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
+
             sentence = r.sub("", sentence)
 
             # 删除 车主说 技师说 语音 图片
@@ -106,7 +108,7 @@ class Preprocess:
         # 切词，默认精确模式，全模式cut参数cut_all=True
         words = jieba.cut(sentence)
         # 过滤停用词
-        # words = self.filter_stopwords(words)
+        words = self.filter_stopwords(words)
         return ' '.join(words)
 
     @count_time
@@ -296,6 +298,9 @@ class Preprocess:
         np.savetxt(TRAIN_Y, train_y, fmt="%d", delimiter=",")
         np.savetxt(TEST_X, test_x, fmt="%d", delimiter=",")
 
+        #
+        get_seg_data()
+
 if __name__ == '__main__':
 
     """
@@ -307,8 +312,8 @@ if __name__ == '__main__':
     step1 = False  # 是否进行第一步
     reprocess = True  # 是否重新进行预处理
 
-    step2 = False  # 是否进行第二步
-    retrain = False  # 是否重新训练词向量
+    step2 = True  # 是否进行第二步
+    retrain = True  # 是否重新训练词向量
 
     step3 = True  # 是否进行第三步
 

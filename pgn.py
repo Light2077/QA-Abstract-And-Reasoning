@@ -95,6 +95,7 @@ class PGN(tf.keras.Model):
             p_gen = self.pointer(context_vector, dec_hidden, tf.squeeze(dec_x, axis=1))
             # using teacher forcing
             # dec_input = tf.expand_dims(dec_target[:, t], 1)
+            
             coverages.append(coverage_ret)
             predictions.append(pred)
             attentions.append(attention_weights)
@@ -107,6 +108,7 @@ class PGN(tf.keras.Model):
                                        batch_oov_len,
                                        self.params["vocab_size"],
                                        self.params["batch_size"])
+        
         if self.params["mode"] == "train":
             # predictions_shape = (batch_size, dec_len, vocab_size)
             # with dec_len = 1 in pred mode

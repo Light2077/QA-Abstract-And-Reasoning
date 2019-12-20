@@ -179,6 +179,7 @@ def del_all_files_of_dir(path):
 
 
 def get_seg_data():
+    print("get_seg_data")
     _train_seg = pd.read_csv(TRAIN_SEG).fillna("")
     _test_seg = pd.read_csv(TEST_SEG).fillna("")
 

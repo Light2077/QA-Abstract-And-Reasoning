@@ -7,7 +7,7 @@ root = pathlib.Path(os.path.abspath(__file__)).parent.parent
 
 TRAIN_DATA = os.path.join(root, 'data', 'AutoMaster_TrainSet.csv')
 TEST_DATA = os.path.join(root, 'data', 'AutoMaster_TestSet.csv')
-STOP_WORDS = os.path.join(root, 'data', 'stopwords', '哈工大停用词表.txt')
+STOP_WORDS = os.path.join(root, 'data', 'stopwords', 'my_stop_words.txt')
 
 # 预处理过程中生成的数据
 RAW_TEXT = os.path.join(root, 'data', 'raw_text.txt')  # 原始文本

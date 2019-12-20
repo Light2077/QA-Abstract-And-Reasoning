@@ -152,6 +152,7 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
     # 如果mode!="train" 则产生测试集数据
     else:
         print("mode=test")
+
         train_dataset = tf.data.TextLineDataset(params["test_seg_x_dir"])
         for raw_record in train_dataset:
             # import pdb
@@ -181,9 +182,13 @@ def example_generator(params, vocab, max_enc_len, max_dec_len, mode, batch_size)
                 "sample_encoder_pad_mask": sample_encoder_pad_mask
             }
             # 每一批的数据都一样阿, 是的是为了beam search
-            for _ in range(batch_size):
+            if params["decode_mode"]=="beam":
+                for _ in range(batch_size):
+                    yield output
+            elif params["decode_mode"]=="greedy":
                 yield output
-
+            else:
+                print("shit")
 
 def save_example_dataset(params):
     # vocab 对象
@@ -246,8 +251,8 @@ def batch_generator(generator, params, vocab, max_enc_len, max_dec_len, batch_si
     # 每批样本是不等长的，但是最长不超过max_enc_len
     dataset = dataset.padded_batch(batch_size,
                                    padded_shapes=({"enc_len": [],
-                                                   "enc_input": [None],
-                                                   "enc_input_extend_vocab": [None],
+                                                   "enc_input": [params['max_enc_len']],
+                                                   "enc_input_extend_vocab": [params['max_enc_len']],
                                                    "article_oovs": [None],  # 以最长的为准
                                                    "dec_input": [max_dec_len],  # 填充的长度
                                                    "target": [max_dec_len],
@@ -256,7 +261,7 @@ def batch_generator(generator, params, vocab, max_enc_len, max_dec_len, batch_si
                                                    "abstract": [],
                                                    "abstract_sents": [],
                                                    "sample_decoder_pad_mask": [max_dec_len],
-                                                   "sample_encoder_pad_mask": [None]
+                                                   "sample_encoder_pad_mask": [params['max_enc_len']]
                                                    }),
                                    padding_values={"enc_len": -1,
                                                    "enc_input": vocab.word2id[Vocab.PAD_TOKEN],
