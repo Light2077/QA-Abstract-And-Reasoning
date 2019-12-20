@@ -76,7 +76,7 @@ def beam_decode(model, batch, vocab, params):
     # 测试数据的输入
     enc_input = batch[0]["enc_input"]
 
-    # 计算第encoder的输出
+    # 计算encoder的输出
     enc_output, enc_hidden = model.call_encoder(enc_input)
 
     # 初始化batch size个 假设对象
@@ -101,7 +101,7 @@ def beam_decode(model, batch, vocab, params):
         latest_tokens = [h.latest_token for h in hyps]
         # 替换掉 oov token unknown token
         latest_tokens = [t if t in vocab.id2word else unk_index for t in latest_tokens]
-        # 获取所以隐藏层状态
+        # 获取所有隐藏层状态
         hiddens = [h.hidden for h in hyps]
 
         dec_input = tf.expand_dims(latest_tokens, axis=1)
@@ -175,3 +175,91 @@ def beam_decode(model, batch, vocab, params):
     best_hyp.abstract = " ".join([vocab.id_to_word(index) for index in best_hyp.tokens])
     best_hyp.text = batch[0]["article"].numpy()[0].decode()
     return best_hyp
+
+
+def greedy_decode(model, batch, vocab, params):
+
+    batch_size = params["batch_size"]
+    # 初始化mask
+    start_index = vocab.word_to_id(vocab.START_DECODING)
+    stop_index = vocab.word_to_id(vocab.STOP_DECODING)
+    unk_index = vocab.word_to_id(vocab.UNKNOWN_TOKEN)
+
+    batch_size = params["batch_size"]  # 一个一个预测
+
+    # 从batch获得encoder输入
+    # enc_input shape (batch_size, enc_len)
+    enc_input = batch[0]["enc_input"]
+
+    # 获取encoder的输出
+    # enc_output shape (batch_size, enc_len, enc_unit)
+    # enc_hidden shape (batch_size, enc_unit)
+    enc_output, enc_hidden = model.call_encoder(enc_input)  # update
+
+    # 构建decoder初始输入
+    # dec_input shape (batch_size, 1)
+    # dec_hidden shape (batch_size, enc_unit)
+    dec_input = tf.expand_dims([start_index] * batch_size, 1)  # update
+    dec_hidden = enc_hidden  # update
+
+    # 使用包括oov词的输入
+    # enc_extended_inp shape (batch_size, enc_len)
+    enc_extended_inp = batch[0]["extended_enc_input"]  # constant
+
+    # oov词的长度不一定
+    # batch_oov_len shape (, )
+    batch_oov_len = batch[0]["max_oov_len"]  # constant
+
+    # encoder pad mask
+    # enc_pad_mask shape (batch_size, enc_len)
+    enc_pad_mask = batch[0]["sample_encoder_pad_mask"]  # constant
+    
+    prev_coverage = None  # update
+
+    # 遍历步数
+    predicts=[''] * batch_size
+    steps = 0  # initial ste
+    while steps < params['max_dec_len']:
+        final_preds, dec_hidden, context_vector, \
+        attention_weights, p_gens, coverage_ret = model.call_decoder_onestep(dec_input,  # update
+                                                                            dec_hidden,  # update
+                                                                            enc_output,  # constant
+                                                                            enc_extended_inp,  # constant
+                                                                            batch_oov_len,  # constant
+                                                                            enc_pad_mask,  # constant
+                                                                            use_coverage=True,  # constant
+                                                                            prev_coverage=prev_coverage  # update
+                                                                            )
+
+        # final_preds shape (batch_size, 1, vocab_size+oov_size)  oov_size is my guess
+        # predicted_ids shape (batch_size, 1)
+        predicted_ids = tf.argmax(final_preds, axis=2).numpy()
+        dec_input = tf.cast(predicted_ids, dtype=dec_input.dtype)  # update
+
+        # prev_coverage shape (batch_size, enc_len, 1)
+        prev_coverage = coverage_ret  # update
+        
+        for index,pred_id in enumerate(predicted_ids):
+            # exmp: pred_id [458]
+            pred_id = int(pred_id)
+            if pred_id < vocab.count:
+                predicts[index]+= vocab.id2word[pred_id] + ' '
+            else:
+                # if pred_id is oovs index
+                predicts[index]+= batch[0]["article_oovs"][pred_id-vocab.count]
+        steps += 1
+        # print(steps)
+        
+    results=[]
+    for predict in predicts:
+        # 去掉句子前后空格
+        predict=predict.strip()
+        # 句子小于max len就结束了 截断
+        if '<STOP>' in predict:
+            # 截断stop
+            predict=predict[:predict.index('<STOP>')]
+        # 保存结果
+        results.append(predict)
+        
+    return results
+
