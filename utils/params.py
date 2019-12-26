@@ -144,7 +144,7 @@ def get_default_params():
                'embed_size': params_from_dataset['embed_size'],
                'enc_units': 256,
                'dec_units': 256,
-               'attn_units': 10,
+               'attn_units': 64,
                'train_seg_x_dir': TRAIN_SEG_X,
                'train_seg_y_dir': TRAIN_SEG_Y,
 

@@ -55,7 +55,8 @@ def train_model(model, vocab, params, checkpoint_manager):
     #     return tf.reduce_mean(loss)
 
     # 训练
-    # @tf.function
+    
+    @tf.function
     def train_step(enc_inp, extended_enc_input, max_oov_len,
                    dec_input, dec_target, cov_loss_wt,
                    enc_pad_mask, padding_mask=None):
@@ -147,6 +148,7 @@ def train_model(model, vocab, params, checkpoint_manager):
             # delete this part which is use to test if it can run
                 if step > 10:
                     print("my test break")
+                    print("共花了 %.2f s" % (time.time() - start))
                     break
 
         if params["test_run"]:

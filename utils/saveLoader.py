@@ -158,9 +158,16 @@ def load_train_dataset():
     """
     train_x = np.loadtxt(TRAIN_X, delimiter=",")
     train_y = np.loadtxt(TRAIN_Y, delimiter=",")
-    test_x = np.loadtxt(TEST_X, delimiter=",")
 
-    return train_x, train_y, test_x
+    return train_x, train_y
+
+
+def load_test_dataset():
+    """
+    :return: 加载处理好的数据集
+    """
+    test_x = np.loadtxt(TEST_X, delimiter=",")
+    return test_x
 
 
 def del_all_files_of_dir(path):
