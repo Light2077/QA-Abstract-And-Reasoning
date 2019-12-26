@@ -104,7 +104,9 @@ def get_params():
 
     # new
     parser.add_argument("--test_run", default=False, help="test trainable", type=bool)
-
+    parser.add_argument("--greedy_decode", default=True, help="if greedy decode", type=bool)
+    parser.add_argument("--result_save_path", default=os.path.join(TEST_SAVE_DIR, "test_res.csv"),
+                        help='result_save_path', type=str)
     args = parser.parse_args()
     _params = vars(args)
 
@@ -156,7 +158,10 @@ def get_default_params():
                'min_dec_steps': 4,
                'checkpoints_save_steps': 2,
                'test_save_dir': TEST_SAVE_DIR,
-               'test_run': False}
+               'test_run': False,
+               'greedy_decode': True}
+
+
     return _params
 
 

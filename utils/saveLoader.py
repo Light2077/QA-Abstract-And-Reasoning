@@ -156,8 +156,8 @@ def load_train_dataset():
     """
     :return: 加载处理好的数据集
     """
-    train_x = np.loadtxt(TRAIN_X, delimiter=",")
-    train_y = np.loadtxt(TRAIN_Y, delimiter=",")
+    train_x = np.loadtxt(TRAIN_X, delimiter=",", dtype=np.float32)
+    train_y = np.loadtxt(TRAIN_Y, delimiter=",", dtype=np.float32)
 
     return train_x, train_y
 
@@ -166,7 +166,7 @@ def load_test_dataset():
     """
     :return: 加载处理好的数据集
     """
-    test_x = np.loadtxt(TEST_X, delimiter=",")
+    test_x = np.loadtxt(TEST_X, delimiter=",", dtype=np.float32)
     return test_x
 
 

@@ -1,5 +1,6 @@
-from utils.saveLoader import load_train_dataset, load_test_dataset
 import tensorflow as tf
+from utils.saveLoader import load_train_dataset, load_test_dataset, Vocab
+from utils.config import VOCAB_PAD
 
 def train_batch_generator(batch_size, sample_sum=None):
     # 加载数据集
@@ -30,3 +31,25 @@ if __name__ == '__main__':
 
 
 # todo: 预处理数据时不应该截断句子，而是在载入数据集的时候截断
+
+
+if __name__ == "__main__":
+    # "<START>" 14712
+    # "<UNK>" 14713
+    # "<STOP>" 14714
+    # "<PAD>" 14715
+    words = ["方向机", "重", "助力", "泵", "谷丙转氨酶"]
+    ids = [480, 1111, 14713, 288, 14714, 14715, 14715]
+    vocab = Vocab(VOCAB_PAD)
+
+    # print("sentence:", sentence)
+    # print("ids_to_words: ", )
+    # print("ids_to_words: ", )
+    print("words:", words)
+    print("words_to_ids: ", words_to_ids(words, vocab))
+    print("words_to_sentence: ", words_to_sentence(words, vocab))
+
+
+    print("ids:", ids)
+    print("ids_to_words: ", ids_to_words(ids, vocab))
+    print("ids_to_sentence: ", ids_to_sentence(ids, vocab))

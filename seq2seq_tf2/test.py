@@ -6,7 +6,7 @@ from seq2seq_tf2.model import Seq2Seq
 
 from seq2seq_tf2.test_helper import beam_decode, greedy_decode
 
-from utils.config import CKPT_DIR, TEST_X
+from utils.config import CKPT_DIR, TEST_X, SEQ2SEQ_CKPT
 from utils.saveLoader import load_test_dataset
 from utils.config_gpu import config_gpu
 from utils.params import get_params
@@ -18,7 +18,7 @@ def test(params):
     assert params["mode"].lower() in ["test", "eval"], "change training mode to 'test' or 'eval'"
     assert params["beam_size"] == params["batch_size"], "Beam size must be equal to batch_size, change the params"
     # GPU资源配置
-    config_gpu(use_cpu=True)
+    config_gpu()
 
     print("Building the model ...")
     model = Seq2Seq(params)
@@ -29,7 +29,7 @@ def test(params):
     print("Creating the checkpoint manager")
     print("Creating the checkpoint manager")
     checkpoint = tf.train.Checkpoint(Seq2Seq=model)
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, CKPT_DIR, max_to_keep=5)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, SEQ2SEQ_CKPT, max_to_keep=5)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     if checkpoint_manager.latest_checkpoint:
         print("Restored from {}".format(checkpoint_manager.latest_checkpoint))
@@ -38,7 +38,8 @@ def test(params):
     print("Model restored")
 
     if params['greedy_decode']:
-        predict_result(model, params, vocab, params['result_save_path'])
+        params['batch_size'] = 256
+        results = predict_result(model, params, vocab, params['test_save_dir'])
     else:
         b = beam_test_batch_generator(params["beam_size"])
         results = []
@@ -48,13 +49,17 @@ def test(params):
         save_predict_result(results, params['result_save_path'])
         print('save result to :{}'.format(params['result_save_path']))
 
+    return results
+
 
 def predict_result(model, params, vocab, result_save_path):
-    test_X = load_test_dataset(params['max_enc_len'])
+    test_X = load_test_dataset()
     # 预测结果
     results = greedy_decode(model, test_X, params['batch_size'], vocab, params)
     # 保存结果
-    save_predict_result(results, result_save_path)
+    # save_predict_result(results, result_save_path)
+
+    return results
 
 
 def save_predict_result(results, result_save_path):
@@ -72,4 +77,4 @@ if __name__ == '__main__':
     # 获得参数
     params = get_params()
     # 获得参数
-    test(params)
+    results = test(params)

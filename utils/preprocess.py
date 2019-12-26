@@ -1,7 +1,7 @@
 """
 运行此代码可以获得：
 """
-from word2vec import *
+from utils.word2vec import *
 from utils.saveLoader import *
 from utils.decorator import *
 from utils.config import *
@@ -36,19 +36,77 @@ def create_user_dict(*dataframe):
     return _user_dict
 
 
-def index_2_sentence(index):...
+# def sentence_to_words(sentence, vocab):
+#     # jieba.cut(sentence)
+#
+#     return words
+#
+# def sentence_to_ids(sentence, vocab):
+#
+#     return ids
 
+
+def words_to_ids(words, vocab):
+    """
+    :param words: list ["方向机", "重", "助力", "泵", "谷丙转氨酶"]
+    :param vocab:
+    :return: list [480, 1111, 308, 288, 14713]
+    """
+    unk_id = vocab.word_to_id(Vocab.UNKNOWN_TOKEN)
+    ids = [unk_id if vocab.word_to_id(w)==unk_id else vocab.word_to_id(w) for w in words]
+    return ids
+
+
+def words_to_sentence(words, vocab):
+    """
+
+    :param words: list ["方向机", "重", "助力", "泵", "谷丙转氨酶"]
+    :param vocab:
+    :return: 方向机重助力泵
+    """
+    miss = [vocab.word_to_id(Vocab.UNKNOWN_TOKEN),
+            vocab.word_to_id(Vocab.PAD_TOKEN),
+            vocab.word_to_id(Vocab.START_DECODING),
+            vocab.word_to_id(Vocab.STOP_DECODING)]
+
+    sentence = ["" if vocab.word_to_id(w) in miss else w for w in words]
+    sentence ="".join(sentence)
+
+    return sentence
+
+
+def ids_to_words(ids, vocab):
+    return [vocab.id2word[i] for i in ids]
+
+
+def ids_to_sentence(ids, vocab):
+    """
+
+    :param ids: list [480, 1111, 14713, 288, 14714, 14715, 14715]
+    :param vocab:
+    :return: str
+    """
+    start_id = vocab.word_to_id(Vocab.START_DECODING)
+    stop_id = vocab.word_to_id(Vocab.STOP_DECODING)
+    pad_id = vocab.word_to_id(Vocab.PAD_TOKEN)
+    unk_id = vocab.word_to_id(Vocab.UNKNOWN_TOKEN)
+
+    sentence = ""
+    for i in ids:
+        if i not in [start_id, stop_id, pad_id, unk_id]:
+            sentence+=vocab.id2word[i]
+    return sentence
+
+
+def load_stop_words(file):
+    stop_words_ = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
+    return stop_words_
 
 
 class Preprocess:
     def __init__(self):
         self.stop_words = self.load_stop_words(STOP_WORDS)
         print("创建一个预处理器")
-
-    @staticmethod
-    def load_stop_words(file):
-        stop_words_ = [line.strip() for line in open(file, encoding='UTF-8').readlines()]
-        return stop_words_
 
     @staticmethod
     def clean_sentence(sentence):
