@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import tensorflow as tf
 
-from seq2seq.batcher import train_batch_generator
+from seq2seq_tf2.batcher import train_batch_generator
 import time
 # from utils.config import WV_MODEL_PAD
 # from utils.config_gpu import config_gpu
@@ -31,7 +31,7 @@ def train_model(model, vocab, params, checkpoint_manager):
     # @tf.function(input_signature=(tf.TensorSpec(shape=[params["batch_size"], params["max_enc_len"]], dtype=tf.int64),
     #                               tf.TensorSpec(shape=[params["batch_size"], params["max_dec_len"]], dtype=tf.int64)))
     def train_step(enc_inp, dec_target):
-        batch_loss = 0
+
         with tf.GradientTape() as tape:
             enc_output, enc_hidden = model.call_encoder(enc_inp)
             # 第一个decoder输入 开始标签
@@ -40,16 +40,13 @@ def train_model(model, vocab, params, checkpoint_manager):
             dec_hidden = enc_hidden
             # 逐个预测序列
             predictions, _ = model(dec_input, dec_hidden, enc_output, dec_target)
-
             batch_loss = loss_function(dec_target[:, 1:], predictions)
 
-            variables = model.encoder.trainable_variables + model.decoder.trainable_variables + model.attention.trainable_variables
+        variables = model.trainable_variables
+        gradients = tape.gradient(batch_loss, variables)
+        optimizer.apply_gradients(zip(gradients, variables))
 
-            gradients = tape.gradient(batch_loss, variables)
-
-            optimizer.apply_gradients(zip(gradients, variables))
-
-            return batch_loss
+        return batch_loss
 
     dataset, steps_per_epoch = train_batch_generator(batch_size)
 

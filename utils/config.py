@@ -39,9 +39,11 @@ VOCAB_PAD = os.path.join(root, 'data', 'wv', 'vocab_index_pad.txt')
 EMBEDDING_MATRIX_PAD = os.path.join(root, 'data', 'wv', 'embedding_matrix_pad.txt')
 WV_MODEL_PAD = os.path.join(root, 'data', 'wv', 'word2vec_pad.model')
 
-# seq2seq模型
+# 存档
 CKPT_DIR = os.path.join(root, 'data', 'checkpoints', 'training_checkpoints')
 CKPT_PREFIX = os.path.join(CKPT_DIR, "ckpt")
+SEQ2SEQ_CKPT = os.path.join(root, 'data', 'checkpoints', 'seq2seq_checkpoints')
+PGN_CKPT = os.path.join(root, 'data', 'checkpoints', 'pgn_checkpoints')
 
 #其他
 FONT = os.path.join(root, 'data', 'TrueType', 'simhei.ttf')

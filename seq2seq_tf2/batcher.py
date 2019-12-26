@@ -1,7 +1,6 @@
 from utils.saveLoader import load_train_dataset, load_test_dataset
 import tensorflow as tf
 
-
 def train_batch_generator(batch_size, sample_sum=None):
     # 加载数据集
     # train_X, train_Y = load_train_dataset(max_enc_len, max_dec_len)
@@ -25,7 +24,6 @@ def beam_test_batch_generator(beam_size):
     for row in test_x:
         beam_search_data = tf.convert_to_tensor([row for _ in range(beam_size)])
         yield beam_search_data
-
 
 if __name__ == '__main__':
     gen = beam_test_batch_generator(3)

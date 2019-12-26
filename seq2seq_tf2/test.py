@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 # Created by LuoJie at 12/12/19
 import tensorflow as tf
-from seq2seq.batcher import beam_test_batch_generator
-from seq2seq.model import Seq2Seq
+from seq2seq_tf2.batcher import beam_test_batch_generator
+from seq2seq_tf2.model import Seq2Seq
 
-from seq2seq.test_helper import beam_decode, greedy_decode
+from seq2seq_tf2.test_helper import beam_decode, greedy_decode
 
 from utils.config import CKPT_DIR, TEST_X
 from utils.saveLoader import load_test_dataset

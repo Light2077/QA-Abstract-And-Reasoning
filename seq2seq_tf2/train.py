@@ -2,11 +2,12 @@
 # Created by LuoJie at 11/29/19
 import tensorflow as tf
 
-from seq2seq.model import Seq2Seq
-from seq2seq.train_helper import train_model
+from seq2seq_tf2.model import Seq2Seq
+from seq2seq_tf2.train_helper import train_model
 from utils.config_gpu import config_gpu
 from utils.params import get_params
 from utils.saveLoader import Vocab
+from utils.config import SEQ2SEQ_CKPT
 
 def train(params):
     # GPU资源配置
@@ -19,7 +20,7 @@ def train(params):
     model = Seq2Seq(params)
     # 获取保存管理者
     checkpoint = tf.train.Checkpoint(Seq2Seq=model)
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, params['checkpoint_dir'], max_to_keep=5)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, SEQ2SEQ_CKPT, max_to_keep=5)
     # 训练模型
     train_model(model, vocab, params, checkpoint_manager)
 

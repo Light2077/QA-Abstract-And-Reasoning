@@ -1,5 +1,5 @@
 import tensorflow as tf
-from seq2seq.layers import Encoder, Decoder, BahdanauAttention
+from seq2seq_tf2.layers import Encoder, Decoder, BahdanauAttention
 from utils.saveLoader import load_embedding_matrix
 
 
