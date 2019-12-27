@@ -204,6 +204,8 @@ def batch_generator(generator, params, vocab):
                                    padding_values=padding_values,
                                   drop_remainder=True)
     def update(entry):
+
+        # 输出分成2个字典一个是enc的输入，一个是dec的输入
         return ({"article": entry["article"],
                  "enc_input": entry["enc_input"],
                  "sample_encoder_pad_mask": entry["sample_encoder_pad_mask"],

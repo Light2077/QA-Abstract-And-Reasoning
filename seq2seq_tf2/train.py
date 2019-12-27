@@ -33,6 +33,7 @@ def train(params):
     print("batch_size:", params["batch_size"])
     print("max_enc_len:", params["max_enc_len"])
     print("max_dec_len:", params["max_dec_len"])
+
     train_model(model, vocab, params, checkpoint_manager)
 
 

@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import tensorflow as tf
 
-from seq2seq_tf2.batcher import train_batch_generator
+from seq2seq_tf2.batcher import train_batch_generator, batcher
 import time
 # from utils.config import WV_MODEL_PAD
 # from utils.config_gpu import config_gpu
@@ -48,8 +48,9 @@ def train_model(model, vocab, params, checkpoint_manager):
 
         return batch_loss
 
-    dataset, steps_per_epoch = train_batch_generator(batch_size)
-
+    # dataset, steps_per_epoch = train_batch_generator(batch_size)
+    dataset = batcher(vocab, params)
+    # steps_per_epoch =
     for epoch in range(epochs):
         start = time.time()
         total_loss = 0
