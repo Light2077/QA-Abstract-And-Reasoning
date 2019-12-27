@@ -56,6 +56,7 @@ def predict_result(model, params, vocab, result_save_path):
     test_X = load_test_dataset()
     # 预测结果
     results = greedy_decode(model, test_X, params['batch_size'], vocab, params)
+
     # 保存结果
     # save_predict_result(results, result_save_path)
 

@@ -15,7 +15,7 @@ def get_params_from_dataset(check=False):
     if check:
         print("开始check数据集参数")
         params_from_dataset = {}
-        train_x, train_y, test_x = load_train_dataset()
+        train_x, train_y = load_train_dataset()
         embedding = load_embedding_matrix()
 
         params_from_dataset['n_samples'] = train_x.shape[0]
