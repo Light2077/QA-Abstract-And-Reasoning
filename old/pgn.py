@@ -2,8 +2,8 @@
 # Created by LuoJie at 12/7/19
 import tensorflow as tf
 
-from layers import Encoder, BahdanauAttention, Decoder, Pointer
-from seq2seq import Seq2Seq
+from old.layers import Encoder, BahdanauAttention, Decoder, Pointer
+from old.seq2seq import Seq2Seq
 from utils.config import VOCAB_PAD
 from utils.config_gpu import config_gpu
 from utils.saveLoader import load_embedding_matrix, Vocab

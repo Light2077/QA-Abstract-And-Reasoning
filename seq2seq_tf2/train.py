@@ -1,11 +1,12 @@
 import tensorflow as tf
 
 from seq2seq_tf2.model import Seq2Seq
-from seq2seq_tf2.train_helper import train_model
+from seq2seq_tf2.train_helper import train_model, get_train_msg
 from utils.config_gpu import config_gpu
 from utils.params import get_params
 from utils.saveLoader import Vocab
 from utils.config import SEQ2SEQ_CKPT
+import numpy as np
 
 def train(params):
     # GPU资源配置
@@ -13,6 +14,9 @@ def train(params):
     # 读取vocab训练
     vocab = Vocab(params["vocab_path"], params["vocab_size"])
     params['vocab_size'] = vocab.count
+    params["trained_epoch"] = get_train_msg()
+    params["learning_rate"] *= np.power(0.9, params["trained_epoch"])
+
     # 构建模型
     print("Building the model ...")
     model = Seq2Seq(params)
@@ -26,13 +30,16 @@ def train(params):
     else:
         print("Initializing from scratch.")
 
+
     # 训练模型
     print("开始训练模型..")
+    print("trained_epoch:", params["trained_epoch"])
     print("mode:", params["mode"])
     print("epochs:", params["epochs"])
     print("batch_size:", params["batch_size"])
     print("max_enc_len:", params["max_enc_len"])
     print("max_dec_len:", params["max_dec_len"])
+    print("learning_rate:", params["learning_rate"])
 
     train_model(model, vocab, params, checkpoint_manager)
 

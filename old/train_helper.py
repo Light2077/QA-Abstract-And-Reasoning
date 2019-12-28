@@ -1,14 +1,9 @@
 # -*- coding:utf-8 -*-
 import tensorflow as tf
 
-from batcher import batcher
-from loss import coverage_loss
-from seq2seq import Seq2Seq
-from utils.config import VOCAB_PAD
-from utils.config_gpu import config_gpu
+from old.batcher import batcher
+from old.loss import coverage_loss
 import time
-import gc
-import pickle
 
 
 def train_model(model, vocab, params, checkpoint_manager):

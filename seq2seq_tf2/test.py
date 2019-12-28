@@ -6,13 +6,13 @@ from seq2seq_tf2.model import Seq2Seq
 
 from seq2seq_tf2.test_helper import beam_decode, greedy_decode
 
-from utils.config import CKPT_DIR, TEST_X, SEQ2SEQ_CKPT
+from utils.config import CKPT_DIR, TEST_DATA, SEQ2SEQ_CKPT, TEMP_CKPT
 from utils.saveLoader import load_test_dataset
 from utils.config_gpu import config_gpu
 from utils.params import get_params
 from utils.saveLoader import Vocab
 import pandas as pd
-
+import os
 
 def test(params):
     assert params["mode"].lower() in ["test", "eval"], "change training mode to 'test' or 'eval'"
@@ -27,9 +27,13 @@ def test(params):
     vocab = Vocab(params["vocab_path"], params["vocab_size"])
 
     print("Creating the checkpoint manager")
-    print("Creating the checkpoint manager")
     checkpoint = tf.train.Checkpoint(Seq2Seq=model)
+
     checkpoint_manager = tf.train.CheckpointManager(checkpoint, SEQ2SEQ_CKPT, max_to_keep=5)
+
+    # checkpoint_manager = tf.train.CheckpointManager(checkpoint, TEMP_CKPT, max_to_keep=5)
+    # temp_ckpt = os.path.join(TEMP_CKPT, "ckpt-5")
+    # checkpoint.restore(temp_ckpt)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     if checkpoint_manager.latest_checkpoint:
         print("Restored from {}".format(checkpoint_manager.latest_checkpoint))
@@ -38,8 +42,8 @@ def test(params):
     print("Model restored")
 
     if params['greedy_decode']:
-        params['batch_size'] = 256
-        results = predict_result(model, params, vocab, params['test_save_dir'])
+        params['batch_size'] = 512
+        results = predict_result(model, params, vocab, params['result_save_path'])
     else:
         b = beam_test_batch_generator(params["beam_size"])
         results = []
@@ -53,9 +57,10 @@ def test(params):
 
 
 def predict_result(model, params, vocab, result_save_path):
-    test_X = load_test_dataset()
+
+    test_x = load_test_dataset()
     # 预测结果
-    results = greedy_decode(model, test_X, params['batch_size'], vocab, params)
+    results = greedy_decode(model, test_x, vocab, params)
 
     # 保存结果
     # save_predict_result(results, result_save_path)
@@ -65,7 +70,7 @@ def predict_result(model, params, vocab, result_save_path):
 
 def save_predict_result(results, result_save_path):
     # 读取结果
-    test_df = pd.read_csv(TEST_X)
+    test_df = pd.read_csv(TEST_DATA)
     # 填充结果
     test_df['Prediction'] = results
     # 　提取ID和预测结果两列
@@ -77,5 +82,7 @@ def save_predict_result(results, result_save_path):
 if __name__ == '__main__':
     # 获得参数
     params = get_params()
+    params["mode"] = "test"
+    params["batch_size"] = params["beam_size"]
     # 获得参数
     results = test(params)

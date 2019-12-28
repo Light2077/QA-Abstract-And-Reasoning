@@ -26,6 +26,7 @@ TEST_X_PAD = os.path.join(root, 'data', 'test_X_pad.csv')
 TRAIN_SEG_X = os.path.join(root, 'data', 'train_seg_x.csv')
 TRAIN_SEG_Y = os.path.join(root, 'data', 'train_seg_y.csv')
 TEST_SEG_X = os.path.join(root, 'data', 'test_seg_x.csv')
+DATASET_MSG = os.path.join(root, 'data', 'dataset_msg.txt')
 
 TRAIN_X = os.path.join(root, 'data', 'train_x.txt')
 TRAIN_Y = os.path.join(root, 'data', 'train_y.txt')
@@ -44,7 +45,7 @@ CKPT_DIR = os.path.join(root, 'data', 'checkpoints', 'training_checkpoints')
 CKPT_PREFIX = os.path.join(CKPT_DIR, "ckpt")
 SEQ2SEQ_CKPT = os.path.join(root, 'data', 'checkpoints', 'seq2seq_checkpoints')
 PGN_CKPT = os.path.join(root, 'data', 'checkpoints', 'pgn_checkpoints')
-
+TEMP_CKPT = os.path.join(root, 'data', 'checkpoints', 'temp_checkpoints')
 #其他
 FONT = os.path.join(root, 'data', 'TrueType', 'simhei.ttf')
 PARAMS_FROM_DATASET = os.path.join(root, 'data', 'params_from_dataset.txt')

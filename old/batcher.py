@@ -276,7 +276,8 @@ def batch_generator(generator, params, vocab, max_enc_len, max_dec_len, batch_si
                                                    "sample_decoder_pad_mask": 0,
                                                    "sample_encoder_pad_mask": 0
                                                    },
-                                   drop_remainder=True)
+                                   drop_remainder = True
+                                   )
 
     def update(entry):
         return ({"enc_input": entry["enc_input"],

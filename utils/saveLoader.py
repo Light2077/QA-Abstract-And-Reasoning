@@ -2,10 +2,8 @@ import pandas as pd
 import numpy as np
 import pickle
 from utils.config import *
-from utils.decorator import *
 
 
-@count_time
 def get_text(*dataframe, columns=["Question", "Dialogue", "Report"], concater=" "):
     """
     把训练集，测试集的文本拼接在一起
@@ -176,32 +174,13 @@ def del_all_files_of_dir(path):
     :param path: 文件夹路径
     :return:
     """
-    if os.listdir(path)==[]:
+    if os.listdir(path):
         print("there no files in this path")
         return None
     for file_name in os.listdir(path):
         file = os.path.join(path, file_name)
         print("remove file:", file_name)
         os.remove(file)
-
-
-def get_seg_data():
-    print("get_seg_data")
-    _train_seg = pd.read_csv(TRAIN_SEG).fillna("")
-    _test_seg = pd.read_csv(TEST_SEG).fillna("")
-
-    _train_seg['train_seg_x'] = _train_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
-    _test_seg['test_seg_x'] = _test_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
-    _train_seg['train_seg_y'] = _train_seg['Report']
-
-    _train_seg['train_seg_x'].to_csv(TRAIN_SEG_X, index=None)
-    _train_seg['train_seg_y'].to_csv(TRAIN_SEG_Y, index=None)
-    _test_seg['test_seg_x'].to_csv(TEST_SEG_X, index=None)
-
-    print("create: ", TRAIN_SEG_X)
-    print("create: ", TRAIN_SEG_Y)
-    print("create: ", TEST_SEG_X)
-
 
 
 def save_pickle(batch_data, pickle_path):

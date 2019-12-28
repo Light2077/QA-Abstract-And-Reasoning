@@ -5,10 +5,8 @@ from utils.config_gpu import config_gpu
 
 import tensorflow as tf
 
-from batcher import batcher
-from pgn import PGN
-from seq2seq import Seq2Seq
-from utils.train_helper import train_model
+from old.pgn import PGN
+from old.train_helper import train_model
 from utils.config import CKPT_DIR
 from utils.params import get_params
 from utils.saveLoader import Vocab

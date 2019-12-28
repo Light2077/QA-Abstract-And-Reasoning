@@ -8,28 +8,33 @@ class Seq2Seq(tf.keras.Model):
         super(Seq2Seq, self).__init__()
         self.embedding_matrix = load_embedding_matrix()
         self.params = params
-        self.encoder = Encoder(params["vocab_size"],
-                               params["embed_size"],
-                               self.embedding_matrix,
-                               params["enc_units"],
-                               params["batch_size"])
+        self.encoder = Encoder(vocab_size = params["vocab_size"],
+                               embedding_dim = params["embed_size"],
+                               embedding_matrix = self.embedding_matrix,
+                               enc_units = params["enc_units"],
+                               batch_size = params["batch_size"])
 
-        self.attention = BahdanauAttention(params["attn_units"])
+        self.attention = BahdanauAttention(units = params["attn_units"])
 
-        self.decoder = Decoder(params["vocab_size"],
-                               params["embed_size"],
-                               self.embedding_matrix,
-                               params["dec_units"],
-                               params["batch_size"])
+        self.decoder = Decoder(vocab_size =  params["vocab_size"],
+                               embedding_dim = params["embed_size"],
+                               embedding_matrix = self.embedding_matrix,
+                               dec_units = params["dec_units"],
+                               batch_size = params["batch_size"])
 
     def call_encoder(self, enc_inp):
         enc_hidden = self.encoder.initialize_hidden_state()
         enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden)
+        # enc_output (batch_size, enc_len, enc_units)
+        # enc_hidden (batch_size, enc_units)
         return enc_output, enc_hidden
 
     def call_decoder_onestep(self, dec_input, dec_hidden, enc_output):
+        # context_vector ()
+        # attention_weights ()
         context_vector, attention_weights = self.attention(dec_hidden, enc_output)
 
+        # pred ()
         pred, dec_hidden = self.decoder(dec_input,
                                         None,
                                         None,
@@ -54,5 +59,4 @@ class Seq2Seq(tf.keras.Model):
 
             predictions.append(pred)
             attentions.append(attn)
-
         return tf.stack(predictions, 1), dec_hidden

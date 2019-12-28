@@ -1,9 +1,9 @@
 import tensorflow as tf
 
 class Encoder(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, embedding_matrix, enc_units, batch_sz):
+    def __init__(self, vocab_size, embedding_dim, embedding_matrix, enc_units, batch_size):
         super(Encoder, self).__init__()
-        self.batch_sz = batch_sz
+        self.batch_sz = batch_size
         self.enc_units = enc_units
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, weights=[embedding_matrix],
                                                    trainable=False)
@@ -57,9 +57,9 @@ class BahdanauAttention(tf.keras.layers.Layer):
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, embedding_matrix, dec_units, batch_sz):
+    def __init__(self, vocab_size, embedding_dim, embedding_matrix, dec_units, batch_size):
         super(Decoder, self).__init__()
-        self.batch_sz = batch_sz
+        self.batch_sz = batch_size
         self.dec_units = dec_units
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, weights=[embedding_matrix],
                                                    trainable=False)
@@ -91,57 +91,3 @@ class Decoder(tf.keras.Model):
 
         return prediction, state
 
-
-class Seq2Seq(tf.keras.Model):
-    def __init__(self, params):
-        super(Seq2Seq, self).__init__()
-        self.embedding_matrix = load_embedding_matrix()
-        self.params = params
-        self.encoder = Encoder(params["vocab_size"],
-                               params["embed_size"],
-                               self.embedding_matrix,
-                               params["enc_units"],
-                               params["batch_size"])
-
-        self.attention = BahdanauAttention(params["attn_units"])
-
-        self.decoder = Decoder(params["vocab_size"],
-                               params["embed_size"],
-                               self.embedding_matrix,
-                               params["dec_units"],
-                               params["batch_size"])
-
-    def call_encoder(self, enc_inp):
-        enc_hidden = self.encoder.initialize_hidden_state()
-        enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden)
-        return enc_output, enc_hidden
-
-    def call_decoder_onestep(self, dec_input, dec_hidden, enc_output):
-        context_vector, attention_weights = self.attention(dec_hidden, enc_output)
-
-        pred, dec_hidden = self.decoder(dec_input,
-                                        None,
-                                        None,
-                                        context_vector)
-        return pred, dec_hidden, context_vector, attention_weights
-
-    def call(self, dec_input, dec_hidden, enc_output, dec_target):
-        predictions = []
-        attentions = []
-
-        context_vector, _ = self.attention(dec_hidden, enc_output)
-
-        for t in range(1, dec_target.shape[1]):
-            pred, dec_hidden = self.decoder(dec_input,
-                                            dec_hidden,
-                                            enc_output,
-                                            context_vector)
-
-            context_vector, attn = self.attention(dec_hidden, enc_output)
-            # using teacher forcing
-            dec_input = tf.expand_dims(dec_target[:, t], 1)
-
-            predictions.append(pred)
-            attentions.append(attn)
-
-        return tf.stack(predictions, 1), dec_hidden

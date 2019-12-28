@@ -1,11 +1,11 @@
 # -*- coding:utf-8 -*-
 # Created by LuoJie at 12/12/19
 import tensorflow as tf
-from batcher import batcher
-from pgn import PGN
+from old.batcher import batcher
+from old.pgn import PGN
 from tqdm import tqdm
 
-from utils.test_helper import beam_decode
+from old.test_helper import beam_decode
 from utils.config import CKPT_DIR
 from utils.params import get_params
 from utils.saveLoader import Vocab

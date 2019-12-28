@@ -32,20 +32,7 @@ if __name__ == '__main__':
 
 # todo: 预处理数据时不应该截断句子，而是在载入数据集的时候截断
 def get_dec_inp_targ_seqs(sequence, max_len, start_id, stop_id):
-    """
-    Given the reference summary as a sequence of tokens, return the input sequence for the decoder,
-    and the target sequence which we will use to calculate loss.
-    The sequence will be truncated if it is longer than max_len.
-    The input sequence must start with the start_id and the target sequence must end with the stop_id (but not if it's been truncated).
-    Args:
-      sequence: List of ids (integers)
-      max_len: integer
-      start_id: integer
-      stop_id: integer
-    Returns:
-      inp: sequence length <=max_len starting with start_id
-      target: sequence same length as input, ending with stop_id only if there was no truncation
-    """
+
     inp = [start_id] + sequence[:]
     target = sequence[:]
     if len(inp) > max_len:  # truncate
@@ -68,45 +55,50 @@ def example_generator(params, vocab):
 
         # 合并训练数据
         train_dataset = tf.data.Dataset.zip((ds_train_x, ds_train_y))
-        train_dataset = train_dataset.shuffle(params["batch_size"]*10+1, reshuffle_each_iteration=True).repeat()
+        train_dataset = train_dataset.shuffle(params["batch_size"]*2+1, reshuffle_each_iteration=True).repeat()
 
         for raw_record in train_dataset:
             # train_x的处理
             article = raw_record[0].numpy().decode("utf-8")  # '新能源 车 最大 短板 '
-            article_words = article.split()[:params["max_enc_len"]]  # ['新能源', '车', '最大', '短板']
+            article_words = article.split()[:params["max_enc_len"]-2]  # ['新能源', '车', '最大', '短板']
 
             enc_input = [vocab.word_to_id(w) for w in article_words]  # [6080, 14, 1250, 14701]
-            enc_input = [start_decoding]+ enc_input + [stop_decoding]  # [14700, 6080, 14, 1250, 14701, 14702]
-            enc_len = len(enc_input)  # 6
-            sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
+            enc_input = [start_decoding] + enc_input + [stop_decoding]  # [14700, 6080, 14, 1250, 14701, 14702]
+
+            #enc_len = len(enc_input)  # 6
+            #sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
 
 
             # train_y的处理
             abstract = raw_record[1].numpy().decode("utf-8")  # '在于 充电 还有 一个 续航 里程'
-            abstract_words = abstract.split()  # ['在于', '充电', '还有', '一个', '续航', '里程']
-            abs_ids = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
+            abstract_words = abstract.split()[:params["max_dec_len"]-2]  # ['在于', '充电', '还有', '一个', '续航', '里程']
 
 
-            dec_input, target = get_dec_inp_targ_seqs(abs_ids, params["max_dec_len"], start_decoding, stop_decoding)
+            target = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
+            target = [start_decoding] + target + [stop_decoding]
+
+            # dec_input, target = get_dec_inp_targ_seqs(abs_ids, params["max_dec_len"]-1, start_decoding, stop_decoding)
+
             # dec_input [14700, 4980, 939, 41, 27, 4013, 815]
             # target [4980, 939, 41, 27, 4013, 815, 14702]
 
-            dec_len = len(dec_input)  # 7
-            sample_decoder_pad_mask = [1 for _ in range(dec_len)]  # [1, 1, 1, 1, 1, 1, 1]
+            # dec_len = len(target)  # 7
+            # dec_mask = [1 for _ in range(dec_len)]  # [1, 1, 1, 1, 1, 1, 1]
 
 
             output = {
-                "article": article,  # '新能源 车 最大 短板 '
+                #"article": article,  # '新能源 车 最大 短板 '
                 "enc_input": enc_input,  # [14700, 6080, 14, 1250, 14701, 14702]
-                "sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
-                "enc_len": enc_len,  # 6
+                #"sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
+                #"enc_len": enc_len,  # 6
 
-                "abstract": abstract,  # '在于 充电 还有 一个 续航 里程'
-                "dec_input": dec_input,  # [14700, 4980, 939, 41, 27, 4013, 815]
+                #"abstract": abstract,  # '在于 充电 还有 一个 续航 里程'
+                #"dec_input": dec_input,  # [14700, 4980, 939, 41, 27, 4013, 815]
                 "target": target,  # [4980, 939, 41, 27, 4013, 815, 14702]
-                "sample_decoder_pad_mask": sample_decoder_pad_mask,  # [1, 1, 1, 1, 1, 1, 1]
-                "dec_len": dec_len,  # 7
+                # "dec_mask": dec_mask,  # [1, 1, 1, 1, 1, 1, 1]
+                #"dec_len": dec_len,  # 7
             }
+
             yield output
 
     else:
@@ -120,19 +112,20 @@ def example_generator(params, vocab):
             enc_input = [vocab.word_to_id(w) for w in article_words]  # [6080, 14, 1250, 14701]
             enc_input = [start_decoding] + enc_input + [stop_decoding]  # [14700, 6080, 14, 1250, 14701, 14702]
 
-            enc_len = len(enc_input)  # 6
-            sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
+            #enc_len = len(enc_input)  # 6
+            #sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
 
-            output = {"article": article,  # '新能源 车 最大 短板 '
+            output = {
+                      # "article": article,  # '新能源 车 最大 短板 '
                       "enc_input": enc_input,  # [14700, 6080, 14, 1250, 14701, 14702]
-                      "sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
-                      "enc_len": enc_len,  # 6
+                      # "sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
+                      # "enc_len": enc_len,  # 6
 
-                      "abstract": "",
-                      "dec_input": [],
+                      # "abstract": "",
+                      # "dec_input": [],
                       "target": [],
-                      "sample_decoder_pad_mask": [],
-                      "dec_len": params["max_dec_len"],  # 7
+                      # "dec_mask": [],
+                      # "dec_len": params["max_dec_len"],  # 7
             }
             # 每一批的数据都一样阿, 是的是为了beam search
             if params["decode_mode"]=="beam":
@@ -146,55 +139,57 @@ def example_generator(params, vocab):
 
 def batch_generator(generator, params, vocab):
     output_types={
-        "article": tf.string,  # '新能源 车 最大 短板 '
+        # "article": tf.string,  # '新能源 车 最大 短板 '
         "enc_input": tf.int32,  # [14700, 6080, 14, 1250, 14701, 14702]
-        "sample_encoder_pad_mask": tf.int32,  # [1, 1, 1, 1, 1, 1]
-        "enc_len": tf.int32,  # 6
+        # "sample_encoder_pad_mask": tf.int32,  # [1, 1, 1, 1, 1, 1]
+        # "enc_len": tf.int32,  # 6
 
-        "abstract": tf.string,  # '在于 充电 还有 一个 续航 里程'
-        "dec_input": tf.int32,  # [14700, 4980, 939, 41, 27, 4013, 815]
+        # "abstract": tf.string,  # '在于 充电 还有 一个 续航 里程'
+        # "dec_input": tf.int32,  # [14700, 4980, 939, 41, 27, 4013, 815]
         "target": tf.int32,  # [4980, 939, 41, 27, 4013, 815, 14702]
-        "sample_decoder_pad_mask": tf.int32,  # [1, 1, 1, 1, 1, 1, 1]
-        "dec_len": tf.int32,  # 7
+        # "dec_mask": tf.float32,  # [1, 1, 1, 1, 1, 1, 1]
+        # "dec_len": tf.int32,  # 7
     }
 
     output_shapes={
-        "article": [],  # 不限
+        # "article": [],  # 不限
         "enc_input": [None],  # 长度不限
-        "sample_encoder_pad_mask": [None],  # 不限
-        "enc_len": [],  # 不限
+        # "sample_encoder_pad_mask": [None],  # 不限
+        # "enc_len": [],  # 不限
 
-        "abstract": [],  # 不限
-        "dec_input": [None],  # 长度不限
+        # "abstract": [],  # 不限
+        # "dec_input": [None],  # 长度不限
         "target": [None],  # 不限
-        "sample_decoder_pad_mask": [None],  # 不限
-        "dec_len": [],
+        # "dec_mask": [None],  # 不限
+        # "dec_len": [],
     }
 
     padded_shapes={
-        "article": [],  # 不限
+        # "article": [],  # 不限
         "enc_input": [None],  # 以最长的为准
-        "sample_encoder_pad_mask": [None],  # 以最长的为准
-        "enc_len": [],  # 不限
+        # "sample_encoder_pad_mask": [None],  # 以最长的为准
+        # "enc_len": [],  # 不限
 
-        "abstract": [],  # 不限
-        "dec_input": [params['max_dec_len']],  # 统一dec长度
+        # "abstract": [],  # 不限
+        # 为何要减一：因为max_dec_len计算的是增加了<START>和<STOP>的后的长度
+        # 而dec_input 和 target只增加了其中一个
+        # "dec_input": [params['max_dec_len']-1],  # 统一dec长度
         "target": [params['max_dec_len']],  # 统一dec长度
-        "sample_decoder_pad_mask": [params['max_dec_len']],  # 统一dec长度
-        "dec_len": [],
+        # "dec_mask": [params['max_dec_len']],  # 统一dec长度
+        # "dec_len": [],
     }
 
     padding_values={
-        "article": b"",  #
+        # "article": b"",  #
         "enc_input": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
-        "sample_encoder_pad_mask": 0,  # 多余的用0填充
-        "enc_len": -1,  # 不限
+        # "sample_encoder_pad_mask": 0,  # 多余的用0填充
+        # "enc_len": -1,  # 不限
 
-        "abstract": b"",  # 不限
-        "dec_input": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
+        # "abstract": b"",  # 不限
+        # "dec_input": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
         "target": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
-        "sample_decoder_pad_mask": 0,  # 多余的用0填充
-        "dec_len": -1,
+        # "dec_mask": 0.,  # 多余的用0填充
+        # "dec_len": -1,
     }
     dataset =  tf.data.Dataset.from_generator(lambda: generator(params, vocab),
                                               output_types=output_types,
@@ -203,20 +198,22 @@ def batch_generator(generator, params, vocab):
                                    padded_shapes=padded_shapes,
                                    padding_values=padding_values,
                                   drop_remainder=True)
-    def update(entry):
-
-        # 输出分成2个字典一个是enc的输入，一个是dec的输入
-        return ({"article": entry["article"],
-                 "enc_input": entry["enc_input"],
-                 "sample_encoder_pad_mask": entry["sample_encoder_pad_mask"],
-                 "enc_len": entry["enc_len"],},
-
-                {"abstract": entry["abstract"],
-                 "dec_input": entry["dec_input"],
-                 "target": entry["target"],
-                 "dec_len": entry["dec_len"],
-                 "sample_decoder_pad_mask": entry["sample_decoder_pad_mask"]})
-    dataset = dataset.map(update)
+    # def update(entry):
+    #
+    #     # 输出分成2个字典一个是enc的输入，一个是dec的输入
+    #             # enc部分
+    #     return ({
+    #             "article": entry["article"],
+    #              "enc_input": entry["enc_input"],
+    #              "sample_encoder_pad_mask": entry["sample_encoder_pad_mask"],
+    #              "enc_len": entry["enc_len"],},
+    #             # dec部分
+    #             {"abstract": entry["abstract"],
+    #              "dec_input": entry["dec_input"],
+    #              "target": entry["target"],
+    #              "dec_len": entry["dec_len"],
+    #              "sample_decoder_pad_mask": entry["sample_decoder_pad_mask"]})
+    # dataset = dataset.map(update)
     return dataset
 
 

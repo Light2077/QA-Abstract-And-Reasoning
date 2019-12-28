@@ -1,9 +1,10 @@
 """
 运行此代码可以获得：
 """
+import time
+from functools import wraps
 from utils.word2vec import *
 from utils.saveLoader import *
-from utils.decorator import *
 from utils.config import *
 
 import re
@@ -11,6 +12,27 @@ import jieba
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool, cpu_count
+from utils.config import DATASET_MSG
+
+
+def count_time(func):
+    """
+    用于计算函数运行时间的装饰器
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def int_time(*args, **kwargs):
+
+        start_time = time.time()  # 程序开始时间
+        res = func(*args, **kwargs)
+        over_time = time.time()  # 程序结束时间
+
+        total_time = (over_time - start_time)
+        print('程序{}()共耗时{:.2f}秒'.format(func.__name__, total_time))
+        return res
+
+    return int_time
 
 
 def create_user_dict(*dataframe):
@@ -117,12 +139,12 @@ class Preprocess:
         """
         if isinstance(sentence, str):
 
-            r = re.compile("您当前的问题已经解决，建议您下载汽车大师APP，在APP内搜索我的名字，关注后，即可与我一对一图文或电话沟通，我会尽力为您解决问题！")
-            sentence = r.sub("随时联系", sentence)
+            # r = re.compile("您当前的问题已经解决，建议您下载汽车大师APP，在APP内搜索我的名字，关注后，即可与我一对一图文或电话沟通，我会尽力为您解决问题！")
+            # sentence = r.sub("随时联系", sentence)
 
             # 删除1. 2. 3. 这些标题
-            r = re.compile("\D(\d\.)\D")
-            sentence = r.sub("", sentence)
+            # r = re.compile("\D(\d\.)\D")
+            # sentence = r.sub("", sentence)
 
             # 删除带括号的 进口 海外
             r = re.compile(r"[(（]进口[)）]|\(海外\)")
@@ -140,9 +162,6 @@ class Preprocess:
             # 删除 车主说 技师说 语音 图片
             r = re.compile(r"车主说|技师说|语音|图片")
             sentence = r.sub("", sentence)
-
-            
-
 
             # r = re.compile(r"[(（]进口[)）]|\(海外\)|[^\u4e00-\u9fa5_a-zA-Z0-9]")
             # res = r.sub("", sentence)
@@ -299,9 +318,9 @@ class Preprocess:
         #test_x_max_len = self.get_max_len(_test_seg['X'])
 
         #x_max_len = max(train_x_max_len, test_x_max_len)
-        x_max_len = 300
+        x_max_len = 198
         # 获取标签数据 适当的最大长度
-        train_y_max_len = self.get_max_len(_train_seg['Report'])
+        train_y_max_len = 38
         print("输入句子最大长度：", x_max_len)
         print("输出句子最大长度：", train_y_max_len)
 
@@ -316,8 +335,6 @@ class Preprocess:
         _train_seg['X'].to_csv(TRAIN_X_PAD, index=None, header=False)
         _train_seg['Y'].to_csv(TRAIN_Y_PAD, index=None, header=False)
         _test_seg['X'].to_csv(TEST_X_PAD, index=None, header=False)
-
-        get_train_seg_xy()  # ???
 
         # add retrain词向量
         add_train = True
@@ -369,28 +386,65 @@ class Preprocess:
         np.savetxt(TRAIN_Y, train_y, fmt="%d", delimiter=",")
         np.savetxt(TEST_X, test_x, fmt="%d", delimiter=",")
 
-        #
         get_seg_data()
 
 
-def get_train_seg_xy():
-    ts = pd.read_csv(TRAIN_SEG).fillna("")
-    ts['train_seg_x'] = ts[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
-    ts['test_seg_x'] = ts[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
-    ts['train_seg_y'] = ts['Report']
+def del_bad_sample(df):
+    """
+    删除低质量样本
 
-    # 训练集按照enc_inp的长度排个序
-    print("训练集按照enc_inp的长度排序")
-    ts['x_len'] = ts['train_seg_x'].apply(lambda x: len(x.strip().split(" ")))
-    ts = ts.sort_values(by="x_len")
+    :param df:
+    :return:
+    """
+    train = pd.read_csv(TRAIN_DATA).fillna("")
+    train["QD_nstr"] = train["Question"].apply(lambda x: len(x)) + train["Dialogue"].apply(lambda x: len(x))
+    train["Rp_nstr"] = train["Report"].apply(lambda x: len(x))
+    bad_words = ['参照下图', '参照图片', '参照图文', '参照图文',
+                 '详见图片', '长时间不回复', '如图', '按图',
+                 '看图', '见图', '随时联系', '已解决', '已经提供图片',
+                 '已经发图片', '还在吗', '匹配']
+    train["bad_words"] = train["Report"].apply(lambda x: x in bad_words)
 
-    ts['train_seg_x'].to_csv(TRAIN_SEG_X, index=None)
-    ts['train_seg_y'].to_csv(TRAIN_SEG_Y, index=None)
-    ts['test_seg_x'].to_csv(TEST_SEG_X, index=None)
+    bad_sample_index = train[((train["QD_nstr"] >= 400) &  # Quesetion Dialogue 字符数>=400，且
+                              (train["Rp_nstr"] <= 8)) |  # Report字符数<=8，或
+                             train["bad_words"] |  # 回复包括bad词，或
+                             (train["Rp_nstr"] < 2)].index  # Report字符数<2
+    good_df = df.copy().drop(bad_sample_index, axis=0)
+    return good_df
+
+
+def get_seg_data():
+    print("get_seg_data")
+
+    # 读取数据
+    _train_seg = pd.read_csv(TRAIN_SEG).fillna("")
+    _test_seg = pd.read_csv(TEST_SEG).fillna("")
+
+    # 删除低质量样本
+    _train_seg = del_bad_sample(_train_seg)
+
+    # 删除Report为空的样本
+    na_idx = _train_seg[(_train_seg["Report"]=="") | (_train_seg["Report"]==" ")].index
+    _train_seg.drop(na_idx, axis=0, inplace=True)
+
+    # 构建训练集x,y 和测试集x
+    _train_seg['train_seg_x'] = _train_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+    _test_seg['test_seg_x'] = _test_seg[['Question', 'Dialogue']].apply(lambda x: ' '.join(x), axis=1)
+    _train_seg['train_seg_y'] = _train_seg['Report']
+
+    # 保存
+    _train_seg['train_seg_x'].to_csv(TRAIN_SEG_X, index=None)
+    _train_seg['train_seg_y'].to_csv(TRAIN_SEG_Y, index=None)
+    _test_seg['test_seg_x'].to_csv(TEST_SEG_X, index=None)
 
     print("create: ", TRAIN_SEG_X)
     print("create: ", TRAIN_SEG_Y)
     print("create: ", TEST_SEG_X)
+
+    # 保存信息
+    print("样本数量为:", _train_seg.shape[0])
+    with open(file=DATASET_MSG, mode="w", encoding="utf8") as f:
+        f.write("n_samples:"+str(_train_seg.shape[0])+"\n")
 
 
 if __name__ == '__main__':

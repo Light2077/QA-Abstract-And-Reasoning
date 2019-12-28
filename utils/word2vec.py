@@ -1,10 +1,8 @@
 """
-运行此代码可以获得：
-- word2vec.model
+训练词向量
 """
 from utils.saveLoader import *
 from utils.config import *
-
 from gensim.models.word2vec import LineSentence
 from gensim.models import word2vec
 from multiprocessing import cpu_count
@@ -22,8 +20,8 @@ def get_wv_model(retrain=False):
         print("开始训练词向量")
         _wv_model = word2vec.Word2Vec(LineSentence(PROC_TEXT),
                                       workers=cpu_count(),
-                                      min_count=10,
-                                      #sg=1,  # skip-gram
+                                      min_count=5,
+                                      sg=1,  # skip-gram
                                       size=300,
                                       iter=10,
                                       seed=1)

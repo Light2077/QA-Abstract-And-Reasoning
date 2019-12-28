@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+# gpu增长按需分配
 def config_gpu():
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:

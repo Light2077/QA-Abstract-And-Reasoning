@@ -1,6 +1,6 @@
 import tensorflow as tf
-from layers import Encoder, BahdanauAttention, Decoder
-from utils.saveLoader import load_vocab, load_embedding_matrix
+from old.layers import Encoder, BahdanauAttention, Decoder
+from utils.saveLoader import load_embedding_matrix
 from utils.config import EMBEDDING_MATRIX_PAD
 
 class Seq2Seq(tf.keras.Model):
