@@ -58,7 +58,7 @@ def train_model(model, vocab, params, checkpoint_manager):
 
             # enc_output (batch_size, enc_len, enc_unit)
             # enc_hidden (batch_size, enc_unit)
-            enc_output, enc_hidden = model.call_encoder(enc_input)
+            enc_output, enc_hidden = model.encoder(enc_input)
 
             # 第一个decoder输入 开始标签
             # dec_input (batch_size, 1)
@@ -97,7 +97,7 @@ def train_model(model, vocab, params, checkpoint_manager):
 
             total_loss += batch_loss
             if (batch+1) % 1 == 0:
-                print('Epoch {} Batch {} Loss {:.4f}'.format(epoch+1,
+                print('Epoch {} Batch {} Loss {:.4f}'.format(params["trained_epoch"] + epoch+1,
                                                              batch+1,
                                                              batch_loss.numpy())
                       )

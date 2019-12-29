@@ -22,13 +22,6 @@ class Seq2Seq(tf.keras.Model):
                                dec_units = params["dec_units"],
                                batch_size = params["batch_size"])
 
-    def call_encoder(self, enc_inp):
-        enc_hidden = self.encoder.initialize_hidden_state()
-        enc_output, enc_hidden = self.encoder(enc_inp, enc_hidden)
-        # enc_output (batch_size, enc_len, enc_units)
-        # enc_hidden (batch_size, enc_units)
-        return enc_output, enc_hidden
-
     def call_decoder_onestep(self, dec_input, dec_hidden, enc_output):
         # context_vector ()
         # attention_weights ()

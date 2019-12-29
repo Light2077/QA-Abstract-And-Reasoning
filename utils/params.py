@@ -3,7 +3,7 @@ import argparse
 from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
 from utils.file_helper import  get_result_file_name
-EPOCH = 2
+EPOCH = 4
 BATCH_SIZE = 64
 NUM_SAMPLES = 81391
 

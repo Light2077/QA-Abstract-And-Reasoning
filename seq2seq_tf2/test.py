@@ -21,6 +21,7 @@ def test(params):
     config_gpu()
 
     print("Building the model ...")
+
     model = Seq2Seq(params)
 
     print("Creating the vocab ...")

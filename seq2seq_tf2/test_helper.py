@@ -28,10 +28,14 @@ def batch_greedy_decode(model, batch_data, vocab, params):
     predicts = [''] * batch_size
 
     inputs = tf.convert_to_tensor(batch_data)
-    hidden = [tf.zeros((batch_size, params['enc_units']))]
+
+    # uniGru
+    # hidden = [tf.zeros((batch_size, params['enc_units']))]
+
+    # bigru need enc_units//2
+    hidden = tf.zeros((batch_size, params['enc_units']//2))
     enc_output, enc_hidden = model.encoder(inputs, hidden)
     dec_hidden = enc_hidden
-
     dec_input = tf.expand_dims([vocab.word_to_id(vocab.START_DECODING)] * batch_size, 1)
 
     context_vector, _ = model.attention(dec_hidden, enc_output)
@@ -138,7 +142,7 @@ def beam_decode(model, batch, vocab, params):
     enc_input = batch
 
     # 计算第encoder的输出
-    enc_output, enc_hidden = model.call_encoder(enc_input)
+    enc_output, enc_hidden = model.encoder(enc_input)
 
     # 初始化batch size个 假设对象
     hyps = [Hypothesis(tokens=[start_index],

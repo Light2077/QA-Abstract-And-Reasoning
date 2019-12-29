@@ -3,23 +3,37 @@ import tensorflow as tf
 class Encoder(tf.keras.Model):
     def __init__(self, vocab_size, embedding_dim, embedding_matrix, enc_units, batch_size):
         super(Encoder, self).__init__()
-        self.batch_sz = batch_size
+        self.batch_size = batch_size
         self.enc_units = enc_units
+        self.use_bi_gru = True
+        # 双向
+        if self.use_bi_gru:
+            self.enc_units = self.enc_units // 2
+
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, weights=[embedding_matrix],
                                                    trainable=False)
         self.gru = tf.keras.layers.GRU(self.enc_units,
-                                       return_sequences=True,
-                                       return_state=True,
-                                       recurrent_initializer='glorot_uniform')
+                                   return_sequences=True,
+                                   return_state=True,
+                                   recurrent_initializer='glorot_uniform')
 
-    def call(self, x, hidden):
+        self.bi_gru = tf.keras.layers.Bidirectional(self.gru)
+
+    def call(self, enc_input):
         # (batch_size, enc_len, embedding_dim)
-        x = self.embedding(x)
-        output, state = self.gru(x, initial_state=hidden)
-        return output, state
+        enc_input_embedded = self.embedding(enc_input)
+        initial_state = self.gru.get_initial_state(enc_input_embedded)
 
-    def initialize_hidden_state(self):
-        return tf.zeros((self.batch_sz, self.enc_units))
+        if self.use_bi_gru:
+            # 是否使用双向GRU
+            output, forward_state, backward_state = self.bi_gru(enc_input_embedded, initial_state=initial_state * 2)
+            enc_hidden = tf.keras.layers.concatenate([forward_state, backward_state], axis=-1)
+
+        else:
+            # 单向GRU
+            output, enc_hidden = self.gru(enc_input_embedded, initial_state=initial_state)
+
+        return output, enc_hidden
 
 
 class BahdanauAttention(tf.keras.layers.Layer):
@@ -70,25 +84,24 @@ class Decoder(tf.keras.Model):
                                        recurrent_initializer='glorot_uniform')
         self.fc = tf.keras.layers.Dense(vocab_size)
 
-    def call(self, x, hidden, enc_output, context_vector):
+    def call(self, dec_input, prev_dec_hidden, enc_output, context_vector):
         # 使用上次的隐藏层（第一次使用编码器隐藏层）、编码器输出计算注意力权重
         # enc_output shape == (batch_size, max_length, hidden_size)
 
         # x shape after passing through embedding == (batch_size, 1, embedding_dim)
-        x = self.embedding(x)
+        dec_input = self.embedding(dec_input)
 
         # 将上一循环的预测结果跟注意力权重值结合在一起作为本次的GRU网络输入
-        # x shape after concatenation == (batch_size, 1, embedding_dim + hidden_size)
-        x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
+        # dec_input (batch_size, 1, embedding_dim + hidden_size)
+        dec_input = tf.concat([tf.expand_dims(context_vector, 1), dec_input], axis=-1)
 
         # passing the concatenated vector to the GRU
-        output, state = self.gru(x)
+        dec_output, dec_hidden = self.gru(dec_input)
 
-        # output shape == (batch_size * 1, hidden_size)
-        output = tf.reshape(output, (-1, output.shape[2]))
+        # dec_output shape == (batch_size * 1, hidden_size)
+        dec_output = tf.reshape(dec_output, (-1, dec_output.shape[2]))
 
-        # output shape == (batch_size, vocab)
-        prediction = self.fc(output)
-
-        return prediction, state
+        # dec_output shape == (batch_size, vocab)
+        pred = self.fc(dec_output)
+        return pred, dec_hidden
 
