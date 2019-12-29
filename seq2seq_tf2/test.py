@@ -34,6 +34,7 @@ def test(params):
     # checkpoint_manager = tf.train.CheckpointManager(checkpoint, TEMP_CKPT, max_to_keep=5)
     # temp_ckpt = os.path.join(TEMP_CKPT, "ckpt-5")
     # checkpoint.restore(temp_ckpt)
+
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     if checkpoint_manager.latest_checkpoint:
         print("Restored from {}".format(checkpoint_manager.latest_checkpoint))
@@ -63,7 +64,7 @@ def predict_result(model, params, vocab, result_save_path):
     results = greedy_decode(model, test_x, vocab, params)
 
     # 保存结果
-    # save_predict_result(results, result_save_path)
+    save_predict_result(results, result_save_path)
 
     return results
 

@@ -117,7 +117,8 @@ def train_model(model, vocab, params, checkpoint_manager):
             ckpt_save_path = checkpoint_manager.save()
 
             try:
-                with open("record.txt", mode="a", encoding="utf-8") as f:
+                record_file = os.path.join(SEQ2SEQ_CKPT, "record.txt")
+                with open(record_file, mode="a", encoding="utf-8") as f:
                     f.write('Epoch {} Loss {:.4f}\n'.format(params["trained_epoch"] + epoch + 1,
                                                 total_loss / steps_per_epoch))
             except:
