@@ -139,23 +139,20 @@ class Preprocess:
         """
         if isinstance(sentence, str):
 
-            # r = re.compile("您当前的问题已经解决，建议您下载汽车大师APP，在APP内搜索我的名字，关注后，即可与我一对一图文或电话沟通，我会尽力为您解决问题！")
-            # sentence = r.sub("随时联系", sentence)
-
             # 删除1. 2. 3. 这些标题
-            # r = re.compile("\D(\d\.)\D")
-            # sentence = r.sub("", sentence)
+            r = re.compile("\D(\d\.)\D")
+            sentence = r.sub("", sentence)
 
             # 删除带括号的 进口 海外
             r = re.compile(r"[(（]进口[)）]|\(海外\)")
             sentence = r.sub("", sentence)
 
             # 删除除了汉字数字字母和，！？。.- 以外的字符
-            # r = re.compile("[^，！？。\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
-            # sentence = sentence.replace(",", "，")
-            # sentence = sentence.replace("!", "！")
-            # sentence = sentence.replace("?", "？")
-            r = re.compile("[^\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
+            r = re.compile("[^，！？。\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
+            sentence = sentence.replace(",", "，")
+            sentence = sentence.replace("!", "！")
+            sentence = sentence.replace("?", "？")
+            # r = re.compile("[^\.\-\u4e00-\u9fa5_a-zA-Z0-9]")
 
             sentence = r.sub("", sentence)
 
@@ -396,6 +393,13 @@ def del_bad_sample(df):
     :param df:
     :return:
     """
+
+    def detect_bad_words(x):
+        for bad in bad_words:
+            if (bad in x and len(x) <= 6):
+                return True
+        return False
+
     train = pd.read_csv(TRAIN_DATA).fillna("")
     train["QD_nstr"] = train["Question"].apply(lambda x: len(x)) + train["Dialogue"].apply(lambda x: len(x))
     train["Rp_nstr"] = train["Report"].apply(lambda x: len(x))
@@ -403,13 +407,19 @@ def del_bad_sample(df):
                  '详见图片', '长时间不回复', '如图', '按图',
                  '看图', '见图', '随时联系', '已解决', '已经提供图片',
                  '已经发图片', '还在吗', '匹配']
-    train["bad_words"] = train["Report"].apply(lambda x: x in bad_words)
+    train["bad_words"] = train["Report"].apply(lambda x: detect_bad_words(x))
+
+    train["car_master"] = train["Report"].apply(lambda x: "建议您下载汽车大师APP" in x)
 
     bad_sample_index = train[((train["QD_nstr"] >= 400) &  # Quesetion Dialogue 字符数>=400，且
-                              (train["Rp_nstr"] <= 8)) |  # Report字符数<=8，或
-                             train["bad_words"] |  # 回复包括bad词，或
-                             (train["Rp_nstr"] < 2)].index  # Report字符数<2
+                              (train["Rp_nstr"] <= 8)) |  # Report字符数<=8(882)，或
+                             train["bad_words"] |  # 回复包括bad词(643)，或
+                             (train["Rp_nstr"] < 2) |  # Report字符数<2(84)，或
+                             train["car_master"]  # 回复推销汽车大师app(31)
+                             ].index  # 共1482
+
     good_df = df.copy().drop(bad_sample_index, axis=0)
+    print("共删除{}个低质量样本".format(len(bad_sample_index)))
     return good_df
 
 

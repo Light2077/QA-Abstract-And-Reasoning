@@ -62,7 +62,7 @@ def predict_result(model, params, vocab, result_save_path):
     test_x = load_test_dataset()
     # 预测结果
     results = greedy_decode(model, test_x, vocab, params)
-
+    results = list(map(lambda x: x.replace(" ",""), results))
     # 保存结果
     save_predict_result(results, result_save_path)
 

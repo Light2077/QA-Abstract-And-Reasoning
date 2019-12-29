@@ -13,6 +13,7 @@ class Encoder(tf.keras.Model):
                                        recurrent_initializer='glorot_uniform')
 
     def call(self, x, hidden):
+        # (batch_size, enc_len, embedding_dim)
         x = self.embedding(x)
         output, state = self.gru(x, initial_state=hidden)
         return output, state

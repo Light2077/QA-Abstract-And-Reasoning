@@ -2,10 +2,10 @@ import argparse
 
 from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
-
-EPOCH = 15
+from utils.file_helper import  get_result_file_name
+EPOCH = 2
 BATCH_SIZE = 64
-NUM_SAMPLES = 81625
+NUM_SAMPLES = 81391
 
 def get_params():
     vocab = Vocab(VOCAB_PAD)
@@ -65,8 +65,8 @@ def get_params():
     parser.add_argument("--train_seg_x_dir", default=TRAIN_SEG_X, help="train_seg_x_dir", type=str)
     parser.add_argument("--train_seg_y_dir", default=TRAIN_SEG_Y, help="train_seg_y_dir", type=str)
     parser.add_argument("--test_seg_x_dir", default=TEST_SEG_X, help="train_seg_x_dir", type=str)
-    parser.add_argument("--test_save_dir", default=TEST_SAVE_DIR, help="load batch train data from pickle", type=str)
-    parser.add_argument("--result_save_path", default=os.path.join(TEST_SAVE_DIR, "test_res.csv"),
+
+    parser.add_argument("--result_save_path", default=get_result_file_name(),
                         help='result save path', type=str)
 
     # 暂时不确定有何用

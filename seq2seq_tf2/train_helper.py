@@ -138,6 +138,6 @@ def train_model(model, vocab, params, checkpoint_manager):
             print("learning_rate=", optimizer.get_config()["learning_rate"])
             save_train_msg(params["trained_epoch"]+epoch+1)  # 保存已训练的轮数
 
-        print('Epoch {} Loss {:.4f}'.format(epoch + 1,
+        print('Epoch {} Loss {:.4f}'.format(params["trained_epoch"] + epoch + 1,
                                             total_loss / steps_per_epoch))
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
