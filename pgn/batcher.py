@@ -1,9 +1,8 @@
 import tensorflow as tf
 from utils.saveLoader import load_train_dataset, load_test_dataset, Vocab
 from utils.config import VOCAB_PAD
-
-
-
+from utils.config_gpu import config_gpu
+from utils.params import get_params
 def beam_test_batch_generator(beam_size):
     # 加载数据集
     test_x = load_test_dataset()
@@ -14,18 +13,17 @@ def beam_test_batch_generator(beam_size):
 if __name__ == '__main__':
     gen = beam_test_batch_generator(3)
 
-
-# todo: 预处理数据时不应该截断句子，而是在载入数据集的时候截断
 def article_to_ids(article_words, vocab):
     ids = []
     oovs = []
     unk_id = vocab.word_to_id(Vocab.UNKNOWN_TOKEN)
     for w in article_words:
+        # 正常按照流程加入词
         i = vocab.word_to_id(w)
-        if i == unk_id:  # If w is OOV
-            if w not in oovs:  # Add to list of OOVs
-                oovs.append(w)
-            oov_num = oovs.index(w)  # This is 0 for the first article OOV, 1 for the second article OOV...
+        if i == unk_id:  # 如果发现oov词
+            if w not in oovs:  # 且oov列表还没有该oov词
+                oovs.append(w)  # 该oov词加入oov列表
+            oov_num = oovs.index(w)  # 该句第一个oov词 oov_num=0, 第二个oov词 oov_num=1
             ids.append(vocab.size() + oov_num)  # This is e.g. 50000 for the first article OOV, 50001 for the second...
         else:
             ids.append(i)
@@ -106,12 +104,13 @@ def get_enc_inp_targ_seqs(sequence, max_len, start_id, stop_id):
       inp: sequence length <=max_len starting with start_id
       target: sequence same length as input, ending with stop_id only if there was no truncation
     """
-    inp = [start_id] + sequence[:]
-    if len(inp) >= max_len:  # truncate
-        inp = inp[:max_len]
+
+    if len(sequence) >= max_len:
+        inp = sequence[:max_len]
     else:
-        inp.append(stop_id)  # end token
-    # assert len(inp) == len(target)
+        inp = sequence[:]
+
+    inp = [start_id] + inp + [stop_id]
     return inp
 
 def example_generator(params, vocab):
@@ -135,38 +134,43 @@ def example_generator(params, vocab):
             enc_input = [vocab.word_to_id(w) for w in article_words]  # [6080, 14, 1250, 14701]
             enc_input = [start_decoding] + enc_input + [stop_decoding]  # [14700, 6080, 14, 1250, 14701, 14702]
 
-            #enc_len = len(enc_input)  # 6
-            #sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
+            enc_len = len(enc_input)  # 6
+            enc_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
 
+            enc_input_extend_vocab, article_oovs = article_to_ids(article_words,
+                                                                  vocab)
+            enc_input_extend_vocab = [start_decoding] + enc_input_extend_vocab + [stop_decoding]
 
             # train_y的处理
             abstract = raw_record[1].numpy().decode("utf-8")  # '在于 充电 还有 一个 续航 里程'
             abstract_words = abstract.split()[:params["max_dec_len"]-2]  # ['在于', '充电', '还有', '一个', '续航', '里程']
 
+            # abs_ids = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
 
-            target = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
-            target = [start_decoding] + target + [stop_decoding]
+            abs_ids_extend_vocab = abstract_to_ids(abstract_words, vocab, article_oovs)
+            target = [start_decoding] + abs_ids_extend_vocab + [stop_decoding]
 
-            # dec_input, target = get_dec_inp_targ_seqs(abs_ids, params["max_dec_len"]-1, start_decoding, stop_decoding)
+            # if params['pointer_gen']:
+            #     abs_ids_extend_vocab = abstract_to_ids(abstract_words, vocab, article_oovs)
+            #     _, target = get_dec_inp_targ_seqs(abs_ids_extend_vocab, max_dec_len, start_decoding, stop_decoding)
 
-            # dec_input [14700, 4980, 939, 41, 27, 4013, 815]
-            # target [4980, 939, 41, 27, 4013, 815, 14702]
+            dec_len = len(target)  # 7
+            dec_mask = [1 for _ in range(dec_len)]  # [1, 1, 1, 1, 1, 1, 1]
 
-            # dec_len = len(target)  # 7
-            # dec_mask = [1 for _ in range(dec_len)]  # [1, 1, 1, 1, 1, 1, 1]
-
+            assert len(enc_input) == len(enc_input_extend_vocab), "ERROR: your code has something wrong!"
 
             output = {
-                #"article": article,  # '新能源 车 最大 短板 '
-                "enc_input": enc_input,  # [14700, 6080, 14, 1250, 14701, 14702]
-                #"sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
-                #"enc_len": enc_len,  # 6
-
-                #"abstract": abstract,  # '在于 充电 还有 一个 续航 里程'
-                #"dec_input": dec_input,  # [14700, 4980, 939, 41, 27, 4013, 815]
-                "target": target,  # [4980, 939, 41, 27, 4013, 815, 14702]
-                # "dec_mask": dec_mask,  # [1, 1, 1, 1, 1, 1, 1]
-                #"dec_len": dec_len,  # 7
+                "enc_len": enc_len,
+                "enc_input": enc_input,
+                "enc_input_extend_vocab": enc_input_extend_vocab,
+                "article_oovs": article_oovs,
+                "target": target,
+                "dec_len": dec_len,
+                "article": article,
+                "abstract": abstract,
+                "abstract_sents": abstract,
+                "dec_mask": dec_mask,
+                "enc_mask": enc_mask
             }
 
             yield output
@@ -175,6 +179,7 @@ def example_generator(params, vocab):
         test_dataset = tf.data.TextLineDataset(params["test_seg_x_dir"])
 
         for raw_record in test_dataset:
+
             article = raw_record.numpy().decode("utf-8")  # '新能源 车 最大 短板 '
             article_words = article.split()[:params["max_enc_len"]]  # ['新能源', '车', '最大', '短板']
 
@@ -182,21 +187,27 @@ def example_generator(params, vocab):
             enc_input = [vocab.word_to_id(w) for w in article_words]  # [6080, 14, 1250, 14701]
             enc_input = [start_decoding] + enc_input + [stop_decoding]  # [14700, 6080, 14, 1250, 14701, 14702]
 
-            #enc_len = len(enc_input)  # 6
-            #sample_encoder_pad_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
+            enc_len = len(enc_input)  # 6
+            enc_mask = [1 for _ in range(enc_len)]  # [1, 1, 1, 1, 1, 1]
 
+            enc_input_extend_vocab, article_oovs = article_to_ids(article_words, vocab)
+            enc_input_extend_vocab = [start_decoding] + enc_input_extend_vocab + [stop_decoding]
+            assert len(enc_input) == len(enc_input_extend_vocab), "ERROR: your code has something wrong!"
             output = {
-                      # "article": article,  # '新能源 车 最大 短板 '
-                      "enc_input": enc_input,  # [14700, 6080, 14, 1250, 14701, 14702]
-                      # "sample_encoder_pad_mask": sample_encoder_pad_mask,  # [1, 1, 1, 1, 1, 1]
-                      # "enc_len": enc_len,  # 6
-
-                      # "abstract": "",
-                      # "dec_input": [],
-                      "target": [],
-                      # "dec_mask": [],
-                      # "dec_len": params["max_dec_len"],  # 7
+                "enc_len": enc_len,
+                "enc_input": enc_input,
+                "enc_input_extend_vocab": enc_input_extend_vocab,
+                "article_oovs": article_oovs,
+                "target": [],
+                "dec_len": params['max_dec_len'],
+                "article": article,
+                "abstract": '',
+                "abstract_sents": '',
+                "dec_mask": [],
+                "enc_mask": enc_mask
             }
+
+
             # 每一批的数据都一样阿, 是的是为了beam search
             if params["decode_mode"]=="beam":
                 for _ in range(params["batch_size"]):
@@ -208,59 +219,60 @@ def example_generator(params, vocab):
 
 
 def batch_generator(generator, params, vocab):
-    output_types={
-        # "article": tf.string,  # '新能源 车 最大 短板 '
-        "enc_input": tf.int32,  # [14700, 6080, 14, 1250, 14701, 14702]
-        # "sample_encoder_pad_mask": tf.int32,  # [1, 1, 1, 1, 1, 1]
-        # "enc_len": tf.int32,  # 6
-
-        # "abstract": tf.string,  # '在于 充电 还有 一个 续航 里程'
-        # "dec_input": tf.int32,  # [14700, 4980, 939, 41, 27, 4013, 815]
-        "target": tf.int32,  # [4980, 939, 41, 27, 4013, 815, 14702]
-        # "dec_mask": tf.float32,  # [1, 1, 1, 1, 1, 1, 1]
-        # "dec_len": tf.int32,  # 7
+    output_types = {
+        "enc_len": tf.int32,
+        "enc_input": tf.int32,
+        "enc_input_extend_vocab": tf.int32,
+        "article_oovs": tf.string,
+        "target": tf.int32,
+        "dec_len": tf.int32,
+        "article": tf.string,
+        "abstract": tf.string,
+        "abstract_sents": tf.string,
+        "dec_mask": tf.float32,
+        "enc_mask": tf.float32,
     }
 
-    output_shapes={
-        # "article": [],  # 不限
-        "enc_input": [None],  # 长度不限
-        # "sample_encoder_pad_mask": [None],  # 不限
-        # "enc_len": [],  # 不限
-
-        # "abstract": [],  # 不限
-        # "dec_input": [None],  # 长度不限
-        "target": [None],  # 不限
-        # "dec_mask": [None],  # 不限
-        # "dec_len": [],
+    output_shapes = {
+        "enc_len": [],
+        "enc_input": [None],
+        "enc_input_extend_vocab": [None],
+        "article_oovs": [None],
+        "target": [None],
+        "dec_len": [],
+        "article": [],
+        "abstract": [],
+        "abstract_sents": [],
+        "dec_mask": [None],
+        "enc_mask": [None]
     }
 
-    padded_shapes={
-        # "article": [],  # 不限
-        "enc_input": [None],  # 以最长的为准
-        # "sample_encoder_pad_mask": [None],  # 以最长的为准
-        # "enc_len": [],  # 不限
+    padded_shapes = {"enc_len": [],
+                      "enc_input": [None],
+                      "enc_input_extend_vocab": [None],
+                      "article_oovs": [None],
+                      "target": [params['max_dec_len']],
+                      "dec_len": [],
+                      "article": [],
+                      "abstract": [],
+                      "abstract_sents": [],
+                      "dec_mask": [params['max_dec_len']],
+                      "enc_mask": [None]
+                      }
 
-        # "abstract": [],  # 不限
-        # 为何要减一：因为max_dec_len计算的是增加了<START>和<STOP>的后的长度
-        # 而dec_input 和 target只增加了其中一个
-        # "dec_input": [params['max_dec_len']-1],  # 统一dec长度
-        "target": [params['max_dec_len']],  # 统一dec长度
-        # "dec_mask": [params['max_dec_len']],  # 统一dec长度
-        # "dec_len": [],
-    }
+    padding_values = {"enc_len": -1,
+                      "enc_input": vocab.word2id[Vocab.PAD_TOKEN],
+                      "enc_input_extend_vocab": vocab.word2id[Vocab.PAD_TOKEN],
+                      "article_oovs": b'',
+                      "target": vocab.word2id[Vocab.PAD_TOKEN],
+                      "dec_len": -1,
+                      "article": b"",
+                      "abstract": b"",
+                      "abstract_sents": b'',
+                      "dec_mask": 0.,
+                      "enc_mask": 0.
+                      }
 
-    padding_values={
-        # "article": b"",  #
-        "enc_input": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
-        # "sample_encoder_pad_mask": 0,  # 多余的用0填充
-        # "enc_len": -1,  # 不限
-
-        # "abstract": b"",  # 不限
-        # "dec_input": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
-        "target": vocab.word2id[Vocab.PAD_TOKEN],  # 用pad的id来填充
-        # "dec_mask": 0.,  # 多余的用0填充
-        # "dec_len": -1,
-    }
     dataset =  tf.data.Dataset.from_generator(lambda: generator(params, vocab),
                                               output_types=output_types,
                                               output_shapes=output_shapes)
@@ -268,22 +280,24 @@ def batch_generator(generator, params, vocab):
                                    padded_shapes=padded_shapes,
                                    padding_values=padding_values,
                                   drop_remainder=True)
-    # def update(entry):
-    #
-    #     # 输出分成2个字典一个是enc的输入，一个是dec的输入
-    #             # enc部分
-    #     return ({
-    #             "article": entry["article"],
-    #              "enc_input": entry["enc_input"],
-    #              "sample_encoder_pad_mask": entry["sample_encoder_pad_mask"],
-    #              "enc_len": entry["enc_len"],},
-    #             # dec部分
-    #             {"abstract": entry["abstract"],
-    #              "dec_input": entry["dec_input"],
-    #              "target": entry["target"],
-    #              "dec_len": entry["dec_len"],
-    #              "sample_decoder_pad_mask": entry["sample_decoder_pad_mask"]})
-    # dataset = dataset.map(update)
+    def update(entry):
+
+        # 输出分成2个字典一个是enc的输入，一个是dec的输入
+                # enc部分
+        return ({"enc_input": entry["enc_input"],
+                 "extended_enc_input": entry["enc_input_extend_vocab"],
+                 "article_oovs": entry["article_oovs"],
+                 "enc_len": entry["enc_len"],
+                 "article": entry["article"],
+                 "max_oov_len": tf.shape(entry["article_oovs"])[1],
+                 "enc_mask": entry["enc_mask"]},
+
+                {
+                 "dec_target": entry["target"],
+                 "dec_len": entry["dec_len"],
+                 "abstract": entry["abstract"],
+                 "dec_mask": entry["dec_mask"]})
+    dataset = dataset.map(update)
     return dataset
 
 
@@ -296,23 +310,14 @@ def batcher(vocab, params):
 
 
 if __name__ == "__main__":
-    pass
-    # "<START>" 14712
-    # "<UNK>" 14713
-    # "<STOP>" 14714
-    # "<PAD>" 14715
-    # words = ["方向机", "重", "助力", "泵", "谷丙转氨酶"]
-    # ids = [480, 1111, 14713, 288, 14714, 14715, 14715]
-    # vocab = Vocab(VOCAB_PAD)
-    #
-    # # print("sentence:", sentence)
-    # # print("ids_to_words: ", )
-    # # print("ids_to_words: ", )
-    # print("words:", words)
-    # print("words_to_ids: ", words_to_ids(words, vocab))
-    # print("words_to_sentence: ", words_to_sentence(words, vocab))
-    #
-    #
-    # print("ids:", ids)
-    # print("ids_to_words: ", ids_to_words(ids, vocab))
-    # print("ids_to_sentence: ", ids_to_sentence(ids, vocab))
+    # GPU资源配置
+    config_gpu()
+    # 获取参数
+    params = get_params()
+    params['mode'] = 'train'
+    # vocab 对象
+    vocab = Vocab(VOCAB_PAD)
+    ds = batcher(vocab, params)
+
+    batch = next(iter(ds.take(1)))
+
