@@ -36,14 +36,26 @@ class Encoder(tf.keras.Model):
         return output, enc_hidden
 
 
+def masked_attention(enc_padding_mask, attn_dist):
+    """Take softmax of e then apply enc_padding_mask and re-normalize"""
+    attn_dist = tf.squeeze(attn_dist, axis=2)
+    mask = tf.cast(enc_padding_mask, dtype=attn_dist.dtype)
+    attn_dist *= mask  # apply mask
+    masked_sums = tf.reduce_sum(attn_dist, axis=1)  # shape (batch_size)
+    attn_dist = attn_dist / tf.reshape(masked_sums, [-1, 1])  # re-normalize
+    attn_dist = tf.expand_dims(attn_dist, axis=2)
+    return attn_dist
+
+
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, units):
         super(BahdanauAttention, self).__init__()
-        self.W1 = tf.keras.layers.Dense(units)
-        self.W2 = tf.keras.layers.Dense(units)
+        self.W_s = tf.keras.layers.Dense(units)
+        self.W_h = tf.keras.layers.Dense(units)
+        self.W_c = tf.keras.layers.Dense(units)
         self.V = tf.keras.layers.Dense(1)
 
-    def call(self, dec_hidden, enc_output):
+    def call(self, dec_hidden, enc_output, enc_pad_mask, use_coverage, prev_coverage=None):
         # dec_hidden shape == (batch_size, hidden size)
         # enc_output (batch_size, enc_len, enc_units)
 
@@ -51,25 +63,42 @@ class BahdanauAttention(tf.keras.layers.Layer):
         # we are doing this to perform addition to calculate the score
         hidden_with_time_axis = tf.expand_dims(dec_hidden, 1)
 
-        # we get 1 at the last axis because we are applying score to self.V
-        # the shape of the tensor before applying self.V is (batch_size, enc_len, attn_units)
-        # 计算注意力权重值
-        # score shape == (batch_size, enc_len, 1)
-        score = self.V(tf.nn.tanh(
-            self.W1(enc_output) + self.W2(hidden_with_time_axis)))
+        if use_coverage and prev_coverage is not None:
+            # Multiply coverage vector by w_c to get coverage_features.
+            # self.W_s(values) [batch_sz, max_len, units] self.W_h(hidden_with_time_axis) [batch_sz, 1, units]
+            # self.W_c(prev_coverage) [batch_sz, max_len, units]  score [batch_sz, max_len, 1]
+            score = self.V(tf.nn.tanh(
+                                      self.W_s(enc_output) +
+                                      self.W_h(hidden_with_time_axis) +
+                                      self.W_c(prev_coverage)
+                                      )
+                           )
+            # attention_weights shape (batch_size, max_len, 1)
 
-        # attention_weights (batch_size, enc_len, 1)
-        attention_weights = tf.nn.softmax(score, axis=1)
+            # attention_weights shape (batch_size, max_length, 1)
+            attention_weights = tf.nn.softmax(score, axis=1)
 
-        # # 使用注意力权重*编码器输出作为返回值，将来会作为解码器的输入
-        # enc_output (batch_size, enc_len, enc_units)
-        # attention_weights (batch_size, enc_len, 1)
+            # attention_weights = masked_attention(enc_pad_mask, attention_weights)
+            coverage = attention_weights + prev_coverage
+        else:
+            # score shape == (batch_size, max_length, 1)
+            # we get 1 at the last axis because we are applying score to self.V
+            # the shape of the tensor before applying self.V is (batch_size, max_length, units)
+            # 计算注意力权重值
+            score = self.V(tf.nn.tanh(self.W_s(enc_output) + self.W_h(hidden_with_time_axis)))
+
+            attention_weights = tf.nn.softmax(score, axis=1)
+            # attention_weights = masked_attention(enc_pad_mask, attention_weights)
+            if use_coverage:
+                coverage = attention_weights
+            else:
+                coverage = []
+
+            # # 使用注意力权重*编码器输出作为返回值，将来会作为解码器的输入
+            # context_vector shape after sum == (batch_size, hidden_size)
         context_vector = attention_weights * enc_output
-
-        # context_vector shape after sum == (batch_size, enc_units)
         context_vector = tf.reduce_sum(context_vector, axis=1)
-
-        return context_vector, attention_weights
+        return context_vector, tf.squeeze(attention_weights, -1), coverage
 
 
 class Decoder(tf.keras.Model):
@@ -77,12 +106,15 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__()
         self.batch_sz = batch_size
         self.dec_units = dec_units
+
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, weights=[embedding_matrix],
                                                    trainable=False)
+
         self.gru = tf.keras.layers.GRU(self.dec_units,
                                        return_sequences=True,
                                        return_state=True,
                                        recurrent_initializer='glorot_uniform')
+
         self.fc = tf.keras.layers.Dense(vocab_size)
 
     def call(self, dec_input, prev_dec_hidden, enc_output, context_vector):
@@ -104,5 +136,18 @@ class Decoder(tf.keras.Model):
 
         # pred shape == (batch_size, vocab)
         pred = self.fc(dec_output)
-        return pred, dec_hidden
+        return dec_input, pred, dec_hidden
+
+class Pointer(tf.keras.layers.Layer):
+
+    def __init__(self):
+        super(Pointer, self).__init__()
+        self.w_s_reduce = tf.keras.layers.Dense(1)
+        self.w_i_reduce = tf.keras.layers.Dense(1)
+        self.w_c_reduce = tf.keras.layers.Dense(1)
+
+    def __call__(self, context_vector, dec_hidden, dec_inp):
+        return tf.nn.sigmoid(self.w_s_reduce(dec_hidden) +
+                             self.w_c_reduce(context_vector) +
+                             self.w_i_reduce(dec_inp))
 
