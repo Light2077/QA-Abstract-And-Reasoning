@@ -36,7 +36,7 @@ def get_wv_model(retrain=False):
         print("词向量训练完毕，保存词向量模型、Embedding matrix和vocab")
         _wv_model.save(WV_MODEL)  # 词向量模型
         save_vocab(VOCAB, _vocab)  # vocab
-        np.savetxt(EMBEDDING_MATRIX, _embedding_matrix)  # embedding
+        np.savetxt(EMBEDDING_MATRIX, _embedding_matrix, fmt='%.9e')  # embedding
 
     else:
         print("读取已训练好的词向量")
