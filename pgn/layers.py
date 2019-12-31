@@ -22,16 +22,16 @@ class Encoder(tf.keras.Model):
     def call(self, enc_input):
         # (batch_size, enc_len, embedding_dim)
         enc_input_embedded = self.embedding(enc_input)
-        initial_state = self.gru.get_initial_state(enc_input_embedded)
+        [initial_state] = self.gru.get_initial_state(enc_input_embedded)
 
         if self.use_bi_gru:
             # 是否使用双向GRU
-            output, forward_state, backward_state = self.bi_gru(enc_input_embedded, initial_state=initial_state * 2)
+            output, forward_state, backward_state = self.bi_gru(enc_input_embedded, initial_state=[initial_state]*2)
             enc_hidden = tf.keras.layers.concatenate([forward_state, backward_state], axis=-1)
 
         else:
             # 单向GRU
-            output, enc_hidden = self.gru(enc_input_embedded, initial_state=initial_state)
+            output, enc_hidden = self.gru(enc_input_embedded, initial_state=[initial_state])
 
         return output, enc_hidden
 
