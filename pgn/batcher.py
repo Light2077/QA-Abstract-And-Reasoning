@@ -141,14 +141,18 @@ def example_generator(params, vocab):
                                                                   vocab)
             enc_input_extend_vocab = [start_decoding] + enc_input_extend_vocab + [stop_decoding]
 
+
             # train_y的处理
             abstract = raw_record[1].numpy().decode("utf-8")  # '在于 充电 还有 一个 续航 里程'
             abstract_words = abstract.split()[:params["max_dec_len"]-2]  # ['在于', '充电', '还有', '一个', '续航', '里程']
 
-            # abs_ids = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
+            abs_ids = [vocab.word_to_id(w) for w in abstract_words]  # [4980, 939, 41, 27, 4013, 815]
+            dec_input = [start_decoding] + abs_ids  # 输入讲道理不加结尾
+            # dec_input = [start_decoding] + abs_ids + [stop_decoding]
 
             abs_ids_extend_vocab = abstract_to_ids(abstract_words, vocab, article_oovs)
-            target = [start_decoding] + abs_ids_extend_vocab + [stop_decoding]
+            target = abs_ids_extend_vocab + [stop_decoding]  # 用来算loss讲道理不加开头
+            # target = [start_decoding] + abs_ids_extend_vocab + [stop_decoding]
 
             # if params['pointer_gen']:
             #     abs_ids_extend_vocab = abstract_to_ids(abstract_words, vocab, article_oovs)
@@ -164,6 +168,7 @@ def example_generator(params, vocab):
                 "enc_input": enc_input,
                 "enc_input_extend_vocab": enc_input_extend_vocab,
                 "article_oovs": article_oovs,
+                "dec_input": dec_input,
                 "target": target,
                 "dec_len": dec_len,
                 "article": article,
@@ -198,8 +203,9 @@ def example_generator(params, vocab):
                 "enc_input": enc_input,
                 "enc_input_extend_vocab": enc_input_extend_vocab,
                 "article_oovs": article_oovs,
+                "dec_input": [],
                 "target": [],
-                "dec_len": params['max_dec_len'],
+                "dec_len": params['max_dec_len']-1,  # 少个开头或结尾
                 "article": article,
                 "abstract": '',
                 "abstract_sents": '',
@@ -224,6 +230,7 @@ def batch_generator(generator, params, vocab):
         "enc_input": tf.int32,
         "enc_input_extend_vocab": tf.int32,
         "article_oovs": tf.string,
+        "dec_input": tf.int32,
         "target": tf.int32,
         "dec_len": tf.int32,
         "article": tf.string,
@@ -238,6 +245,7 @@ def batch_generator(generator, params, vocab):
         "enc_input": [None],
         "enc_input_extend_vocab": [None],
         "article_oovs": [None],
+        "dec_input": [None],
         "target": [None],
         "dec_len": [],
         "article": [],
@@ -251,12 +259,13 @@ def batch_generator(generator, params, vocab):
                       "enc_input": [None],
                       "enc_input_extend_vocab": [None],
                       "article_oovs": [None],
-                      "target": [params['max_dec_len']],
+                      "dec_input": [params['max_dec_len']-1],
+                      "target": [params['max_dec_len']-1],
                       "dec_len": [],
                       "article": [],
                       "abstract": [],
                       "abstract_sents": [],
-                      "dec_mask": [params['max_dec_len']],
+                      "dec_mask": [params['max_dec_len']-1],
                       "enc_mask": [None]
                       }
 
@@ -264,6 +273,7 @@ def batch_generator(generator, params, vocab):
                       "enc_input": vocab.word2id[Vocab.PAD_TOKEN],
                       "enc_input_extend_vocab": vocab.word2id[Vocab.PAD_TOKEN],
                       "article_oovs": b'',
+                      "dec_input" : vocab.word2id[Vocab.PAD_TOKEN],
                       "target": vocab.word2id[Vocab.PAD_TOKEN],
                       "dec_len": -1,
                       "article": b"",
@@ -293,6 +303,7 @@ def batch_generator(generator, params, vocab):
                  "enc_mask": entry["enc_mask"]},
 
                 {
+                 "dec_input" : entry["dec_input"],
                  "dec_target": entry["target"],
                  "dec_len": entry["dec_len"],
                  "abstract": entry["abstract"],

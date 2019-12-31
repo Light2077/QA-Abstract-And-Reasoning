@@ -20,6 +20,9 @@ def get_params():
     parser.add_argument("--beam_size", default=3,
                         help="beam size for beam search decoding (must be equal to batch size in decode mode)",
                         type=int)
+    parser.add_argument("--pointer_gen", default=True,
+                        help="if use pointer generator model",
+                        type=bool)
 
     # 预处理后的参数
     parser.add_argument("--max_enc_len",

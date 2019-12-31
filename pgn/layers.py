@@ -55,7 +55,7 @@ class BahdanauAttention(tf.keras.layers.Layer):
         self.W_c = tf.keras.layers.Dense(units)
         self.V = tf.keras.layers.Dense(1)
 
-    def call(self, dec_hidden, enc_output, enc_pad_mask, use_coverage, prev_coverage=None):
+    def call(self, dec_hidden, enc_output, enc_pad_mask, use_coverage=True, prev_coverage=None):
         # dec_hidden shape == (batch_size, hidden size)
         # enc_output (batch_size, enc_len, enc_units)
 
@@ -85,24 +85,30 @@ class BahdanauAttention(tf.keras.layers.Layer):
             # we get 1 at the last axis because we are applying score to self.V
             # the shape of the tensor before applying self.V is (batch_size, max_length, units)
             # 计算注意力权重值
+
+            # score (batch_size, enc_len, 1)
             score = self.V(tf.nn.tanh(self.W_s(enc_output) + self.W_h(hidden_with_time_axis)))
 
+            # attention_weights (batch_size, enc_len, 1)
             attention_weights = tf.nn.softmax(score, axis=1)
             # attention_weights = masked_attention(enc_pad_mask, attention_weights)
             if use_coverage:
+                # coverage (batch_size, enc_len, 1)
                 coverage = attention_weights
             else:
-                coverage = []
+                coverage = None
 
-            # # 使用注意力权重*编码器输出作为返回值，将来会作为解码器的输入
-            # context_vector shape after sum == (batch_size, hidden_size)
+            # 使用注意力权重*编码器输出作为返回值，将来会作为解码器的输入
+
+        # context_vector shape after sum == (batch_size, enc_units)
         context_vector = attention_weights * enc_output
         context_vector = tf.reduce_sum(context_vector, axis=1)
         return context_vector, tf.squeeze(attention_weights, -1), coverage
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, embedding_matrix, dec_units, batch_size):
+    def __init__(self, vocab_size, embedding_dim, embedding_matrix,
+                 dec_units, batch_size, attention):
         super(Decoder, self).__init__()
         self.batch_sz = batch_size
         self.dec_units = dec_units
@@ -110,33 +116,61 @@ class Decoder(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, weights=[embedding_matrix],
                                                    trainable=False)
 
-        self.gru = tf.keras.layers.GRU(self.dec_units,
-                                       return_sequences=True,
-                                       return_state=True,
-                                       recurrent_initializer='glorot_uniform')
+        self.cell = tf.keras.layers.GRUCell(units=self.dec_units,
+                                            recurrent_initializer='glorot_uniform')
 
-        self.fc = tf.keras.layers.Dense(vocab_size)
+        self.attention = attention
+        self.fc1 = tf.keras.layers.Dense(self.dec_units * 2)
+        self.fc2 = tf.keras.layers.Dense(vocab_size)
 
-    def call(self, dec_input, prev_dec_hidden, enc_output, context_vector):
-        # 使用上次的隐藏层（第一次使用编码器隐藏层）、编码器输出计算注意力权重
-        # enc_output shape == (batch_size, max_length, hidden_size)
+    def call(self, dec_input,  # (batch_size, )
+             prev_dec_hidden,  # (batch_size, dec_units)
+             enc_output,  # (batch_size, enc_len, enc_units)
+             enc_pad_mask,  # (batch_size, enc_len)
+             use_coverage=True,
+             prev_coverage=None):
+        # 得到词向量, output[2]
+        # dec_x (batch_size, embedding_dim)
+        dec_x = self.embedding(dec_input)
 
-        # x shape after passing through embedding == (batch_size, 1, embedding_dim)
-        dec_input = self.embedding(dec_input)
+        # 应用GRU单元算出dec_hidden
+        # 注意cell 返回的state是一个列表，gru单元中为 [h] lstm [h, c]
+        # 所以这里用[dec_hidden] 取出来，这样dec_hidden就是tensor形式了
+        # dec_output (batch_size, dec_units)
+        # dec_hidden (batch_size, dec_units), output[1]
+        dec_output, [dec_hidden] = self.cell(dec_x, [prev_dec_hidden])
 
-        # 将上一循环的预测结果跟注意力权重值结合在一起作为本次的GRU网络输入
-        # dec_input (batch_size, 1, embedding_dim + hidden_size)
-        dec_input = tf.concat([tf.expand_dims(context_vector, 1), dec_input], axis=-1)
+        # 计算注意力，得到上下文，注意力分布，coverage
+        # context_vector (batch_size, enc_units), output[0]
+        # attn (batch_size, enc_len), output[4]
+        # coverage (batch_size, enc_len, 1), output[5]
+        context_vector, attn, coverage = self.attention(dec_hidden,
+                                                        enc_output,
+                                                        enc_pad_mask,
+                                                        use_coverage,
+                                                        prev_coverage)
 
-        # passing the concatenated vector to the GRU
-        dec_output, dec_hidden = self.gru(dec_input)
+        # 将上一循环的预测结果跟注意力权重值结合在一起来预测vocab的分布
+        # dec_output (batch_size, enc_units + dec_units)
+        dec_output = tf.concat([dec_output, context_vector], axis=-1)
 
-        # dec_output shape == (batch_size * 1, hidden_size)
-        dec_output = tf.reshape(dec_output, (-1, dec_output.shape[2]))
+        # 保持维度不变，其实我也不确定第一个全连接层的units该设置为多少
+        # pred (batch_size, enc_units + dec_units)
+        pred = self.fc1(dec_output)
 
-        # pred shape == (batch_size, vocab)
-        pred = self.fc(dec_output)
-        return dec_input, pred, dec_hidden
+        # pred (batch_size, vocab), output[3]
+        pred = self.fc2(pred)
+
+        """output
+        output[0]: context_vector (batch_size, dec_units)
+        output[1]: dec_hidden (batch_size, dec_units)
+        output[2]: dec_x (batch_size, embedding_dim)
+        output[3]: pred (batch_size, vocab_size)
+        output[4]: attn (batch_size, enc_len)
+        output[5]: coverage (batch_size, enc_len, 1)
+        """
+        return context_vector, dec_hidden, dec_x, pred, attn, coverage
+
 
 class Pointer(tf.keras.layers.Layer):
 
@@ -146,7 +180,7 @@ class Pointer(tf.keras.layers.Layer):
         self.w_i_reduce = tf.keras.layers.Dense(1)
         self.w_c_reduce = tf.keras.layers.Dense(1)
 
-    def __call__(self, context_vector, dec_hidden, dec_inp):
+    def call(self, context_vector, dec_hidden, dec_inp):
         return tf.nn.sigmoid(self.w_s_reduce(dec_hidden) +
                              self.w_c_reduce(context_vector) +
                              self.w_i_reduce(dec_inp))
