@@ -67,7 +67,6 @@ def predict_result(model, params, vocab, result_save_path):
     # 预测结果
     results = greedy_decode(model, dataset, vocab, params)
 
-
     results = list(map(lambda x: x.replace(" ",""), results))
     # 保存结果
     save_predict_result(results, result_save_path)
