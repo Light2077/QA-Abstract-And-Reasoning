@@ -56,61 +56,78 @@ class PGN(tf.keras.Model):
 
     def call(self, enc_inp, dec_inp,
              enc_extended_inp, batch_oov_len,
-             enc_pad_mask, use_coverage=True, prev_coverage=None):
+             enc_pad_mask, use_coverage=True):
         '''
         :param enc_inp:
         :param dec_inp:  tf.expand_dims(dec_inp[:, t], 1)
         :param enc_extended_inp:
         :param batch_oov_len:
         '''
-        # 用tf.TensorArray代替list
-        predictions = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
-        attentions = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
-        p_gens = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
-        coverages = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
+        # # 用tf.TensorArray代替list
+        # predictions = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
+        # attentions = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
+        # p_gens = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
+        # coverages = tf.TensorArray(tf.float32, size=dec_inp.shape[1])
 
+        predictions = []
+        attentions = []
+        p_gens = []
+        coverages = []
         # 计算encoder的输出
         enc_output, enc_hidden = self.encoder(enc_inp)
         dec_hidden = enc_hidden
 
-        coverage = prev_coverage
+        # (batch_size, enc_len, 1)
+        prev_coverage = tf.zeros((enc_output.shape[0],enc_output.shape[1],1))
         for t in tf.range(dec_inp.shape[1]):
             context_vector, dec_hidden, \
-            dec_x, pred, attn, coverage = self.decoder(dec_inp[:, t],  # (batch_size, )
+            dec_x, pred, attn, prev_coverage = self.decoder(dec_inp[:, t],  # (batch_size, )
                                                        dec_hidden,  # (batch_size, dec_units)
                                                        enc_output,  # (batch_size, enc_len, enc_units)
                                                        enc_pad_mask,  # (batch_size, enc_len)
-                                                       use_coverage,
-                                                       coverage)
+                                                       prev_coverage,
+                                                       use_coverage
+                                                       )
 
             p_gen = self.pointer(context_vector, dec_hidden, dec_x)
 
             # 每轮迭代后把相应数据写入TensorArray
-            predictions.write(t, pred)
-            attentions.write(t, attn)
-            p_gens.write(t, p_gen)
-            coverages.write(t, coverage)
+            predictions.append(pred)
+            attentions.append(attn)
+            p_gens.append(p_gen)
+            coverages.append(prev_coverage)
 
-        predictions_ = tf.transpose(predictions.stack(), perm=[1, 0, 2])
-        attentions_ = tf.transpose(attentions.stack(), perm=[1, 0, 2])
-        p_gens_ =  tf.transpose(p_gens.stack(), perm=[1, 0, 2])
-        coverages_ =  tf.transpose(coverages.stack(), perm=[1, 0, 2, 3])
-        coverages_ = tf.squeeze(coverages_, -1)
+        #     predictions.write(t, pred)
+        #     attentions.write(t, attn)
+        #     p_gens.write(t, p_gen)
+        #     coverages.write(t, prev_coverage)
+        #
+        # predictions = tf.transpose(predictions.stack(), perm=[1, 0, 2])
+        # attentions = tf.transpose(attentions.stack(), perm=[1, 0, 2])
+        # p_gens =  tf.transpose(p_gens.stack(), perm=[1, 0, 2])
+        # coverages =  tf.transpose(coverages.stack(), perm=[1, 0, 2, 3])
+        #
+        predictions = tf.stack(predictions, axis=1)
+        attentions = tf.stack(attentions, axis=1)
+        p_gens = tf.stack(p_gens, axis=1)
+        coverages = tf.stack(coverages, axis=1)
+
+        coverages = tf.squeeze(coverages, -1)
         # 计算final_dist
         # 注tf.transpose()的作用是调整坐标轴顺序
         # predictions.stack() 的 shape == (dec_len, batch_size, vocab_size)
         # 执行了tf.transpose 后 shape == (batch_size, dec_len, vocab_size)
         final_dist = _calc_final_dist(enc_extended_inp,
-                                      predictions_,
-                                      attentions_,
-                                      p_gens_,
+                                      predictions,
+                                      attentions,
+                                      p_gens,
                                       batch_oov_len,
                                       self.params["vocab_size"],
                                       self.params["batch_size"])
 
         # final_dist (batch_size, dec_len, vocab_size+batch_oov_len)
         # (batch_size, dec_len, enc_len)
-        return final_dist, attentions_, coverages_
+        return final_dist, attentions, coverages
         # return final_dist, dec_hidden, context_vector, attentions, p_gen, prev_coverage
 
 
@@ -123,10 +140,11 @@ def _calc_final_dist(_enc_batch_extend_vocab, vocab_dists, attn_dists, p_gens, b
     _vocab_dists_pgn = vocab_dists * p_gens
     # 根据oov表的长度补齐原词表
     # _extra_zeros (batch_size, dec_len, batch_oov_len)
-    _extra_zeros = tf.zeros((batch_size, p_gens.shape[1], batch_oov_len))
-    # 拼接后公式的左半部分完成了
-    # _vocab_dists_extended (batch_size, dec_len, vocab_size+batch_oov_len)
-    _vocab_dists_extended = tf.concat([_vocab_dists_pgn, _extra_zeros], axis=-1)
+    if batch_oov_len !=0:
+        _extra_zeros = tf.zeros((batch_size, p_gens.shape[1], batch_oov_len))
+        # 拼接后公式的左半部分完成了
+        # _vocab_dists_extended (batch_size, dec_len, vocab_size+batch_oov_len)
+        _vocab_dists_extended = tf.concat([_vocab_dists_pgn, _extra_zeros], axis=-1)
 
     # 公式右半部分
     # 乘以权重后的注意力
@@ -169,7 +187,7 @@ def _calc_final_dist(_enc_batch_extend_vocab, vocab_dists, attn_dists, p_gens, b
     # _enc_batch_extend_vocab_expand (batch_size, dec_len, enc_len)
     _enc_batch_extend_vocab_expand = tf.tile(_enc_batch_extend_vocab_expand, [1, dec_len, 1])
 
-    # 因为要scatter到一个3Dtensor上，所以最后一维是3
+    # 因为要scatter到一个3D tensor上，所以最后一维是3
     # indices (batch_size, dec_len, enc_len, 3)
     indices = tf.stack((batch_nums,
                         dec_len_nums,

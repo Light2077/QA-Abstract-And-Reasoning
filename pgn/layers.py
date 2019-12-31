@@ -19,6 +19,7 @@ class Encoder(tf.keras.Model):
 
         self.bi_gru = tf.keras.layers.Bidirectional(self.gru)
 
+    # @tf.function(input_signature=[tf.TensorSpec(shape=[16, None], dtype=tf.int32)])
     def call(self, enc_input):
         # (batch_size, enc_len, embedding_dim)
         enc_input_embedded = self.embedding(enc_input)
@@ -55,7 +56,8 @@ class BahdanauAttention(tf.keras.layers.Layer):
         self.W_c = tf.keras.layers.Dense(units)
         self.V = tf.keras.layers.Dense(1)
 
-    def call(self, dec_hidden, enc_output, enc_pad_mask, use_coverage=True, prev_coverage=None):
+    # @tf.function
+    def call(self, dec_hidden, enc_output, enc_pad_mask, prev_coverage, use_coverage=True):
         # dec_hidden shape == (batch_size, hidden size)
         # enc_output (batch_size, enc_len, enc_units)
 
@@ -63,7 +65,7 @@ class BahdanauAttention(tf.keras.layers.Layer):
         # we are doing this to perform addition to calculate the score
         hidden_with_time_axis = tf.expand_dims(dec_hidden, 1)
 
-        if use_coverage and prev_coverage is not None:
+        if use_coverage:
             # Multiply coverage vector by w_c to get coverage_features.
             # self.W_s(values) [batch_sz, max_len, units] self.W_h(hidden_with_time_axis) [batch_sz, 1, units]
             # self.W_c(prev_coverage) [batch_sz, max_len, units]  score [batch_sz, max_len, 1]
@@ -80,23 +82,6 @@ class BahdanauAttention(tf.keras.layers.Layer):
 
             # attention_weights = masked_attention(enc_pad_mask, attention_weights)
             coverage = attention_weights + prev_coverage
-        else:
-            # score shape == (batch_size, max_length, 1)
-            # we get 1 at the last axis because we are applying score to self.V
-            # the shape of the tensor before applying self.V is (batch_size, max_length, units)
-            # 计算注意力权重值
-
-            # score (batch_size, enc_len, 1)
-            score = self.V(tf.nn.tanh(self.W_s(enc_output) + self.W_h(hidden_with_time_axis)))
-
-            # attention_weights (batch_size, enc_len, 1)
-            attention_weights = tf.nn.softmax(score, axis=1)
-            # attention_weights = masked_attention(enc_pad_mask, attention_weights)
-            if use_coverage:
-                # coverage (batch_size, enc_len, 1)
-                coverage = attention_weights
-            else:
-                coverage = None
 
             # 使用注意力权重*编码器输出作为返回值，将来会作为解码器的输入
 
@@ -123,12 +108,14 @@ class Decoder(tf.keras.Model):
         self.fc1 = tf.keras.layers.Dense(self.dec_units * 2)
         self.fc2 = tf.keras.layers.Dense(vocab_size)
 
+    # @tf.function
     def call(self, dec_input,  # (batch_size, )
              prev_dec_hidden,  # (batch_size, dec_units)
              enc_output,  # (batch_size, enc_len, enc_units)
              enc_pad_mask,  # (batch_size, enc_len)
-             use_coverage=True,
-             prev_coverage=None):
+             prev_coverage,  # (batch_size, enc_len, 1)
+             use_coverage=True
+             ):
         # 得到词向量, output[2]
         # dec_x (batch_size, embedding_dim)
         dec_x = self.embedding(dec_input)
@@ -147,8 +134,9 @@ class Decoder(tf.keras.Model):
         context_vector, attn, coverage = self.attention(dec_hidden,
                                                         enc_output,
                                                         enc_pad_mask,
-                                                        use_coverage,
-                                                        prev_coverage)
+                                                        prev_coverage,
+                                                        use_coverage
+                                                        )
 
         # 将上一循环的预测结果跟注意力权重值结合在一起来预测vocab的分布
         # dec_output (batch_size, enc_units + dec_units)

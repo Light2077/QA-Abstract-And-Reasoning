@@ -288,18 +288,19 @@ def batch_generator(generator, params, vocab):
                                               output_shapes=output_shapes)
     dataset = dataset.padded_batch(params["batch_size"],
                                    padded_shapes=padded_shapes,
-                                   padding_values=padding_values,
-                                  drop_remainder=True)
+                                   padding_values=padding_values)
     def update(entry):
 
         # 输出分成2个字典一个是enc的输入，一个是dec的输入
                 # enc部分
+        # if
+        # max_oov_len
         return ({"enc_input": entry["enc_input"],
                  "extended_enc_input": entry["enc_input_extend_vocab"],
                  "article_oovs": entry["article_oovs"],
                  "enc_len": entry["enc_len"],
                  "article": entry["article"],
-                 "max_oov_len": tf.shape(entry["article_oovs"])[1],
+                 # "max_oov_len": tf.shape(entry["article_oovs"])[1],
                  "enc_mask": entry["enc_mask"]},
 
                 {

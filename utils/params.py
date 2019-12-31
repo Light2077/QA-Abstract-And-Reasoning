@@ -4,7 +4,7 @@ from utils.config import *
 from utils.saveLoader import Vocab, load_train_dataset, load_embedding_matrix
 from utils.file_helper import  get_result_file_name
 EPOCH = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 NUM_SAMPLES = 81391
 
 def get_params():
@@ -60,7 +60,7 @@ def get_params():
                         type=int)
     parser.add_argument("--enc_units", default=256, help="Encoder GRU cell units number", type=int)
     parser.add_argument("--dec_units", default=256, help="Decoder GRU cell units number", type=int)
-    parser.add_argument("--attn_units", default=128, help="[context vector, decoder state, decoder input] feedforward \
+    parser.add_argument("--attn_units", default=256, help="[context vector, decoder state, decoder input] feedforward \
                             result dimension - this result is used to compute the attention weights",
                         type=int)
 

@@ -1,16 +1,17 @@
 # -*- coding:utf-8 -*-
 # Created by LuoJie at 12/12/19
 import tensorflow as tf
-from seq2seq_tf2.batcher import beam_test_batch_generator
-from seq2seq_tf2.model import Seq2Seq
+from pgn.batcher import beam_test_batch_generator
+from pgn.model import PGN
 
-from seq2seq_tf2.test_helper import beam_decode, greedy_decode
+from pgn.test_helper import beam_decode, greedy_decode
 
-from utils.config import CKPT_DIR, TEST_DATA, SEQ2SEQ_CKPT, TEMP_CKPT
+from utils.config import CKPT_DIR, TEST_DATA, PGN_CKPT, TEMP_CKPT
 from utils.saveLoader import load_test_dataset
 from utils.config_gpu import config_gpu
 from utils.params import get_params
 from utils.saveLoader import Vocab
+from pgn.batcher import batcher
 import pandas as pd
 import os
 
@@ -22,15 +23,16 @@ def test(params):
 
     print("Building the model ...")
 
-    model = Seq2Seq(params)
+    model = PGN(params)
 
     print("Creating the vocab ...")
     vocab = Vocab(params["vocab_path"], params["vocab_size"])
+    # ds = batcher(vocab, params)
 
     print("Creating the checkpoint manager")
-    checkpoint = tf.train.Checkpoint(Seq2Seq=model)
+    checkpoint = tf.train.Checkpoint(PGN=model)
 
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, SEQ2SEQ_CKPT, max_to_keep=5)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, PGN_CKPT, max_to_keep=5)
 
     # checkpoint_manager = tf.train.CheckpointManager(checkpoint, TEMP_CKPT, max_to_keep=5)
     # temp_ckpt = os.path.join(TEMP_CKPT, "ckpt-5")
@@ -60,9 +62,12 @@ def test(params):
 
 def predict_result(model, params, vocab, result_save_path):
 
-    test_x = load_test_dataset()
+    dataset = batcher(vocab, params)
+
     # 预测结果
-    results = greedy_decode(model, test_x, vocab, params)
+    results = greedy_decode(model, dataset, vocab, params)
+
+
     results = list(map(lambda x: x.replace(" ",""), results))
     # 保存结果
     save_predict_result(results, result_save_path)

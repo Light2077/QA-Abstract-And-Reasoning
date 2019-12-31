@@ -13,7 +13,6 @@ from utils.saveLoader import Vocab
 
 def test(params):
     assert params["mode"].lower() == "test", "change training mode to 'test' or 'eval'"
-    # why
     assert params["beam_size"] == params["batch_size"], "Beam size must be equal to batch_size, change the params"
 
     print("Building the model ...")

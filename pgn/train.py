@@ -7,6 +7,7 @@ from utils.params import get_params
 from utils.saveLoader import Vocab
 from utils.config import PGN_CKPT
 import numpy as np
+import sys
 
 def train(params):
     # GPU资源配置
@@ -16,7 +17,7 @@ def train(params):
     params['vocab_size'] = vocab.count
     params["trained_epoch"] = get_train_msg(PGN_CKPT)
     # 学习率衰减
-    params["learning_rate"] *= np.power(0.9, params["trained_epoch"])
+    params["learning_rate"] *= np.power(0.95, params["trained_epoch"])
 
     # 构建模型
     print("Building the model ...")
@@ -48,5 +49,7 @@ def train(params):
 if __name__ == '__main__':
     # 获得参数
     params = get_params()
+    # params["debug_mode"] = True
+    # print(params["debug_mode"])
     # 训练模型
     train(params)

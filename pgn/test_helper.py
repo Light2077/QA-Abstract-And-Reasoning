@@ -3,60 +3,96 @@
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
+from pgn.model import _calc_final_dist
 
-
-def greedy_decode(model, test_x, vocab, params):
+def greedy_decode(model, dataset, vocab, params):
     # 存储结果
     batch_size = params["batch_size"]
     results = []
 
-    sample_size = len(test_x)
+    sample_size = 20000
     # batch 操作轮数 math.ceil向上取整 小数 +1
     # 因为最后一个batch可能不足一个batch size 大小 ,但是依然需要计算
     steps_epoch = sample_size // batch_size + 1
     # [0,steps_epoch)
+    ds = iter(dataset)
     for i in tqdm(range(steps_epoch)):
-        batch_data = test_x[i * batch_size:(i + 1) * batch_size]
-        results += batch_greedy_decode(model, batch_data, vocab, params)
+        enc_data, dec_data = next(ds)
+
+        # batch_data = enc_data["enc_input"]
+
+        results += batch_greedy_decode(model, enc_data, vocab, params)
     return results
 
 
-def batch_greedy_decode(model, batch_data, vocab, params):
+def decode_one_step(params, model, enc_extended_inp, batch_oov_len, dec_input, dec_hidden, enc_output,
+                    enc_pad_mask, prev_coverage, batch_size, use_coverage=True):
+    # 开始decoder
+    context_vector, dec_hidden, \
+    dec_x, pred, attn, coverage = model.decoder(dec_input, dec_hidden, enc_output,
+                                                enc_pad_mask, prev_coverage, use_coverage)
+
+    # 计算p_gen
+    p_gen = model.pointer(context_vector, dec_hidden, dec_x)
+
+    # 保证pred attn p_gen的参数为3D的
+    final_dist = _calc_final_dist(enc_extended_inp,
+                                  tf.expand_dims(pred, 1),
+                                  tf.expand_dims(attn, 1),
+                                  tf.expand_dims(p_gen, 1),
+                                  batch_oov_len,
+                                  params["vocab_size"],
+                                  batch_size)
+
+    return final_dist, dec_hidden, coverage
+
+
+def batch_greedy_decode(model, enc_data, vocab, params):
     # 判断输入长度
-    batch_size = len(batch_data)
+    batch_data = enc_data["enc_input"]
+    batch_size = enc_data["enc_input"].shape[0]
     # 开辟结果存储list
     predicts = [''] * batch_size
-
-    inputs = tf.convert_to_tensor(batch_data)
-
-    # uniGru
-    # hidden = [tf.zeros((batch_size, params['enc_units']))]
-
-    # bigru need enc_units//2
-    # hidden = tf.zeros((batch_size, params['enc_units']//2))
+    inputs = batch_data
+    # print(batch_size, batch_data.shape)
     enc_output, enc_hidden = model.encoder(inputs)
     dec_hidden = enc_hidden
-    dec_input = tf.expand_dims([vocab.word_to_id(vocab.START_DECODING)] * batch_size, 1)
+    # dec_input = tf.expand_dims([vocab.word_to_id(vocab.START_DECODING)] * batch_size, 1)
+    dec_input = tf.constant([vocab.word2id[vocab.START_DECODING]] * batch_size)
 
-    context_vector, _ = model.attention(dec_hidden, enc_output)
     # Teacher forcing - feeding the target as the next input
+
+    try:
+        batch_oov_len = tf.shape(enc_data["article_oovs"])[1]
+    except:
+        batch_oov_len = tf.constant(0)
+
+    coverage = tf.zeros((enc_output.shape[0],enc_output.shape[1],1))
     for t in range(params['max_dec_len']):
-        # 计算上下文
-        # context_vector, attention_weights = model.attention(dec_hidden, enc_output)
         # 单步预测
-        predictions, dec_hidden = model.decoder(dec_input,
-                                                dec_hidden,
-                                                enc_output,
-                                                context_vector)
+        # final_dist (batch_size, 1, vocab_size+batch_oov_len)
+        final_dist, dec_hidden, coverage = decode_one_step(params, model,
+                                                           enc_data["extended_enc_input"],
+                                                           batch_oov_len,
+                                                           dec_input,
+                                                           dec_hidden,
+                                                           enc_output,
+                                                           enc_data["enc_mask"],
+                                                           coverage,
+                                                           batch_size,
+                                                           use_coverage=True)
 
-        # id转换 贪婪搜索
-        predicted_ids = tf.argmax(predictions, axis=1).numpy()
+        # id转换
+        final_dist = tf.squeeze(final_dist, axis=1)
+        predicted_ids = tf.argmax(final_dist, axis=1)
 
-        for index, predicted_id in enumerate(predicted_ids):
+        for index, predicted_id in enumerate(predicted_ids.numpy()):
             predicts[index] += vocab.id_to_word(predicted_id) + ' '
 
         # using teacher forcing
-        dec_input = tf.expand_dims(predicted_ids, 1)
+        dec_input = predicted_ids
+
+
     results = []
     for predict in predicts:
         # 去掉句子前后空格
