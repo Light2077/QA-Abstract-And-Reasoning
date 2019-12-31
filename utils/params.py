@@ -23,6 +23,7 @@ def get_params():
     parser.add_argument("--pointer_gen", default=True,
                         help="if use pointer generator model",
                         type=bool)
+    parser.add_argument("--cov_loss_wt", default=0.5, help="coverage loss weight", type=float)
 
     # 预处理后的参数
     parser.add_argument("--max_enc_len",
