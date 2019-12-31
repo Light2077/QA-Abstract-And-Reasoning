@@ -3,16 +3,16 @@
 import tensorflow as tf
 
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
-def loss_function(real, pred, padding_mask):
+def loss_function(target, pred, padding_mask):
 
-    loss_ = loss_object(real, pred)
+    loss_ = loss_object(target, pred)
     # mask = tf.cast(padding_mask, dtype=loss_.dtype)
     loss_ *= padding_mask
     return tf.reduce_mean(loss_)
     # return tf.reduce_sum(loss_) / tf.reduce_sum(mask)
 
 
-def _coverage_loss(attn_dists, padding_mask):
+def _coverage_loss(attentions, coverages, padding_mask):
     """Calculates the coverage loss from the attention distributions.
 
     Args:
@@ -22,23 +22,24 @@ def _coverage_loss(attn_dists, padding_mask):
     Returns:
       coverage_loss: scalar
     """
-    coverage = tf.zeros_like(attn_dists[0])  # shape (batch_size, attn_length). Initial coverage is zero.
-    covlosses = []  # Coverage loss per decoder timestep. Will be list length max_dec_steps containing shape (batch_size).
-    for a in attn_dists:
-        covloss = tf.reduce_sum(tf.minimum(a, coverage), [1])  # calculate the coverage loss for this step
-        covlosses.append(covloss)
-        coverage += a  # update the coverage vector
-    coverage_loss = _mask_and_avg(covlosses, padding_mask)
-    return coverage_loss
+    # cov_loss (batch_size, dec_len, enc_len)
+    # cov_loss (batch_size, dec_len, enc_len)
+    cov_loss = tf.minimum(attentions, coverages)
+    # mask
+    cov_loss = tf.expand_dims(padding_mask, -1) * cov_loss
+    # 对enc_len的维度求和
+    cov_loss = tf.reduce_sum(cov_loss, axis=2)
+    cov_loss = tf.reduce_mean(cov_loss)
+    return cov_loss
 
 
-def calc_loss(real, pred, padding_mask, attentions, cov_loss_wt, use_coverage):
+def calc_loss(target, pred, padding_mask, attentions, coverages, cov_loss_wt=0.5, use_coverage=True):
     if use_coverage:
-        log_loss = loss_function(real, pred, padding_mask)
-        cov_loss = _coverage_loss(attentions, padding_mask)
+        log_loss = loss_function(target, pred, padding_mask)
+        cov_loss = _coverage_loss(attentions, coverages, padding_mask)
         return log_loss + cov_loss_wt * cov_loss, log_loss, cov_loss
     else:
-        return loss_function(real, pred, padding_mask), 0, 0
+        return loss_function(target, pred, padding_mask), 0, 0
 
 
 def pgn_log_loss_function(real, final_dists, padding_mask):

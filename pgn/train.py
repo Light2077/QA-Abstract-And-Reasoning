@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-from seq2seq_tf2.model import Seq2Seq
-from seq2seq_tf2.train_helper import train_model, get_train_msg
+from pgn.model import PGN
+from pgn.train_helper import train_model, get_train_msg
 from utils.config_gpu import config_gpu
 from utils.params import get_params
 from utils.saveLoader import Vocab
-from utils.config import SEQ2SEQ_CKPT
+from utils.config import PGN_CKPT
 import numpy as np
 
 def train(params):
@@ -14,15 +14,16 @@ def train(params):
     # 读取vocab训练
     vocab = Vocab(params["vocab_path"], params["vocab_size"])
     params['vocab_size'] = vocab.count
-    params["trained_epoch"] = get_train_msg()
+    params["trained_epoch"] = get_train_msg(PGN_CKPT)
+    # 学习率衰减
     params["learning_rate"] *= np.power(0.9, params["trained_epoch"])
 
     # 构建模型
     print("Building the model ...")
-    model = Seq2Seq(params)
+    model = PGN(params)
     # 获取保存管理者
-    checkpoint = tf.train.Checkpoint(Seq2Seq=model)
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, SEQ2SEQ_CKPT, max_to_keep=5)
+    checkpoint = tf.train.Checkpoint(PGN=model)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, PGN_CKPT, max_to_keep=5)
 
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     if checkpoint_manager.latest_checkpoint:

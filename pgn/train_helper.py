@@ -7,17 +7,17 @@ import os
 import numpy as np
 from utils.config import SEQ2SEQ_CKPT
 
-def get_train_msg():
+def get_train_msg(ckpt):
     # 获得已训练的轮次
-    path = os.path.join(SEQ2SEQ_CKPT, "trained_epoch.txt")
+    path = os.path.join(ckpt, "trained_epoch.txt")
     with open(path, mode="r", encoding="utf-8") as f:
         trained_epoch = int(f.read())
     return trained_epoch
 
 
-def save_train_msg(trained_epoch):
+def save_train_msg(ckpt, trained_epoch):
     # 保存训练信息（已训练的轮数）
-    path = os.path.join(SEQ2SEQ_CKPT, "trained_epoch.txt")
+    path = os.path.join(ckpt, "trained_epoch.txt")
     with open(path, mode="w", encoding="utf-8") as f:
         f.write(str(trained_epoch))
 
@@ -31,10 +31,7 @@ def train_model(model, vocab, params, checkpoint_manager):
     pad_index = vocab.word2id[vocab.PAD_TOKEN]
     start_index = vocab.word2id[vocab.START_DECODING]
 
-    # 计算vocab size
-    # params['vocab_size'] = vocab.count
-
-    optimizer = tf.keras.optimizers.Adam(name='Adam', learning_rate=params["learning_rate"])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
     loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
 
     # 定义损失函数

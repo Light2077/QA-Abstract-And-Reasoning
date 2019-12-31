@@ -73,14 +73,15 @@ class PGN(tf.keras.Model):
         enc_output, enc_hidden = self.encoder(enc_inp)
         dec_hidden = enc_hidden
 
+        coverage = prev_coverage
         for t in tf.range(dec_inp.shape[1]):
             context_vector, dec_hidden, \
-            dec_x, pred, attn, prev_coverage = self.decoder(dec_inp[:, t],  # (batch_size, )
+            dec_x, pred, attn, coverage = self.decoder(dec_inp[:, t],  # (batch_size, )
                                                        dec_hidden,  # (batch_size, dec_units)
                                                        enc_output,  # (batch_size, enc_len, enc_units)
                                                        enc_pad_mask,  # (batch_size, enc_len)
                                                        use_coverage,
-                                                       prev_coverage)
+                                                       coverage)
 
             p_gen = self.pointer(context_vector, dec_hidden, dec_x)
 
@@ -88,20 +89,28 @@ class PGN(tf.keras.Model):
             predictions.write(t, pred)
             attentions.write(t, attn)
             p_gens.write(t, p_gen)
-            coverages.write(t, prev_coverage)
+            coverages.write(t, coverage)
 
+        predictions_ = tf.transpose(predictions.stack(), perm=[1, 0, 2])
+        attentions_ = tf.transpose(attentions.stack(), perm=[1, 0, 2])
+        p_gens_ =  tf.transpose(p_gens.stack(), perm=[1, 0, 2])
+        coverages_ =  tf.transpose(coverages.stack(), perm=[1, 0, 2, 3])
+        coverages_ = tf.squeeze(coverages_, -1)
         # 计算final_dist
         # 注tf.transpose()的作用是调整坐标轴顺序
         # predictions.stack() 的 shape == (dec_len, batch_size, vocab_size)
         # 执行了tf.transpose 后 shape == (batch_size, dec_len, vocab_size)
         final_dist = _calc_final_dist(enc_extended_inp,
-                                      tf.transpose(predictions.stack(), perm=[1, 0, 2]),
-                                      tf.transpose(attentions.stack(), perm=[1, 0, 2]),
-                                      tf.transpose(p_gens.stack(), perm=[1, 0, 2]),
+                                      predictions_,
+                                      attentions_,
+                                      p_gens_,
                                       batch_oov_len,
                                       self.params["vocab_size"],
                                       self.params["batch_size"])
-        return final_dist
+
+        # final_dist (batch_size, dec_len, vocab_size+batch_oov_len)
+        # (batch_size, dec_len, enc_len)
+        return final_dist, attentions_, coverages_
         # return final_dist, dec_hidden, context_vector, attentions, p_gen, prev_coverage
 
 
