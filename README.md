@@ -40,7 +40,7 @@ P_{vocab} = softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'})
 $$
 
 区别如下图
-![](notebook/picture/context.jpg)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/notebook/picture/context.jpg)
 
 
 
@@ -133,8 +133,8 @@ def _coverage_loss(attentions, coverages, dec_mask):
 
 老师觉得不错的话能帮我推荐下就更好了~让我也涨几颗星星~
 
-![](notebook\picture\decoder.png)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/notebook/picture/decoder.png)
 
-![](notebook\picture\encoder.png)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/notebook/picture/encoder.png)
 
-![](notebook\picture\gru.png)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/notebook/picture/gru.png)
