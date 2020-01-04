@@ -35,9 +35,8 @@ data文件夹放数据(暂时还未上传)
 - 机器翻译模型是把context_vector和decoder输入词的词向量拼接后输进gru单元，gru的输出接入一个全连接层，算出预测词的分布
 
 - PGN的gru单元输入就只有输入词的词向量，context_vector是和gru的输出做拼接，再输入全连接层进行预测，论文里是有两层全连接层如果我没理解错的话。
-$$
-P_{vocab} = softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'})
-$$
+
+![](http://latex.codecogs.com/gif.latex?\\P_{vocab}=softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'}))
 
 区别如下图
 ![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/context.jpg)
@@ -125,16 +124,14 @@ def _coverage_loss(attentions, coverages, dec_mask):
 
 # 顺便推荐一下下我的notebook
 
-**暂时还是不推荐的**
 
 里边`notebook`的文件夹记录了很多我的学习笔记（虽然还很乱）,有的还配了图比如下面：
 
 我以后还会继续更新，完善notebook，复习的同时把自己学到的知识做成一个教程。
 
-老师觉得不错的话能帮我推荐下就更好了~让我也涨几颗星星~
 
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/tree/master/notebook/picture/decoder.png)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/decoder.png)
 
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/tree/master/notebook/picture/encoder.png)
+![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/encoder.png)
 
 ![](notebook/picture/gru.png)
