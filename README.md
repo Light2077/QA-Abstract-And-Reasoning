@@ -34,7 +34,7 @@ data文件夹放数据(暂时还未上传)
 
 - 机器翻译模型是把context_vector和decoder输入词的词向量拼接后输进gru单元，gru的输出接入一个全连接层，算出预测词的分布
 
-- PGN的gru单元输入就只有输入词的词向量，context_vector是和gru的输出做拼接，再输入全连接层进行预测，论文里是有两层全连接层如果我没理解错的话。
+- PGN的gru单元输入就只有输入词的词向量，context_vector是和gru的输出做拼接，再输入全连接层进行预测，论文里是有两层全连接层如果我没理解错的话。(不过下面右图只画了一层fc，其实应该多接一层)
 
 ![](http://latex.codecogs.com/gif.latex?P_{vocab}=softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'}))
 
