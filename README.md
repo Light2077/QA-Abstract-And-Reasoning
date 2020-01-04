@@ -66,7 +66,7 @@ data文件夹放数据(暂时还未上传)
 
 这部分的代码我进行了比较大的更改，也说不上是优化
 
-源代码里有大量的**列表生成式** ，比如
+源代码里有大量的[**列表生成式**](https://www.liaoxuefeng.com/wiki/1016959663602400/1017317609699776) ，比如
 
 ```
 vocab_dists = [p_gen * dist for (p_gen, dist) in zip(p_gens, vocab_dists)]
