@@ -36,7 +36,7 @@ data文件夹放数据(暂时还未上传)
 
 - PGN的gru单元输入就只有输入词的词向量，context_vector是和gru的输出做拼接，再输入全连接层进行预测，论文里是有两层全连接层如果我没理解错的话。
 
-![](http://latex.codecogs.com/gif.latex?\\P_{vocab}=softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'}))
+![](http://latex.codecogs.com/gif.latex?P_{vocab}=softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'}))
 
 区别如下图
 ![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/context.jpg)
@@ -130,8 +130,8 @@ def _coverage_loss(attentions, coverages, dec_mask):
 我以后还会继续更新，完善notebook，复习的同时把自己学到的知识做成一个教程。
 
 
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/decoder.png)
+![](notebook/picture/decoder.png)
 
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/encoder.png)
+![](notebook/picture/encoder.png)
 
 ![](notebook/picture/gru.png)
