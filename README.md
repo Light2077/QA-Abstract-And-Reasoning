@@ -20,7 +20,7 @@ data文件夹放数据(暂时还未上传)
 
 # 模型结构的改进
 
-![](https://raw.githubusercontent.com/Light2077/QA-Abstract-And-Reasoning/master/notebook/picture/res.jpg)
+![](notebook/picture/res.jpg)
 
 ## Decoder的改进1
 
@@ -39,7 +39,7 @@ data文件夹放数据(暂时还未上传)
 ![](http://latex.codecogs.com/gif.latex?P_{vocab}=softmax(V^{'}(V[s_t,h_t^*]+b)+b^{'}))
 
 区别如下图
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/blob/master/notebook/picture/context.jpg)
+![](notebook/picture/context.jpg)
 
 
 
