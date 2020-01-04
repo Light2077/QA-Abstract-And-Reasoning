@@ -20,7 +20,7 @@ data文件夹放数据(暂时还未上传)
 
 # 模型结构的改进
 
-![](https://github.com/Light2077/QA-Abstract-And-Reasoning/notebook/picture/res.jpg)
+![](https://raw.githubusercontent.com/Light2077/QA-Abstract-And-Reasoning/master/notebook/picture/gru.png)
 
 ## Decoder的改进1
 
