@@ -1,6 +1,6 @@
 # 问答推理与摘要
 
-[开课吧](https://www.kaikeba.com/)的NLP课程，项目一中带老师大家参加的百度AI Studio的[问答推理与摘要](https://aistudio.baidu.com/aistudio/competition/detail/3)的比赛项目代码。
+百度AI Studio的[问答推理与摘要](https://aistudio.baidu.com/aistudio/competition/detail/3)的比赛项目代码。
 
 :sweat_smile:虽然模型效果只有七八十分的大佬的一半还不到，收获还是挺多的。
 
